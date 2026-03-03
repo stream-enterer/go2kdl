@@ -53,11 +53,6 @@ func isDigit(c rune) bool {
 	return c >= '0' && c <= '9'
 }
 
-// isSign returns true if c is + or -
-func isSign(c rune) bool {
-	return c == '-' || c == '+'
-}
-
 // isSeparator returns true if c whitespace, a newline, or a semicolon
 func isSeparator(c rune) bool {
 	return isWhiteSpace(c) || isNewline(c) || c == ';'

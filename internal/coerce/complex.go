@@ -46,14 +46,6 @@ func ToComplex128(v interface{}) complex128 {
 	case string:
 		f, _ := strconv.ParseComplex(x, 128)
 		return f
-	case fmt.Stringer:
-		s := x.String()
-		f, _ := strconv.ParseComplex(s, 128)
-		return f
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		f, _ := strconv.ParseComplex(string(b), 128)
-		return f
 	case error:
 		f, _ := strconv.ParseComplex(x.Error(), 128)
 		return f
@@ -72,6 +64,15 @@ func ToComplex128(v interface{}) complex128 {
 	case *big.Float:
 		f, _ := x.Float64()
 		return complex(f, 0)
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		f, _ := strconv.ParseComplex(string(b), 128)
+		return f
+	case fmt.Stringer:
+		s := x.String()
+		f, _ := strconv.ParseComplex(s, 128)
+		return f
 
 	default:
 		if ToBool(v) {

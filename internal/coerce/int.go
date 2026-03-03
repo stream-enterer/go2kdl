@@ -48,14 +48,6 @@ func ToInt64(v interface{}) int64 {
 	case string:
 		i, _ := strconv.ParseInt(x, 10, 64)
 		return i
-	case fmt.Stringer:
-		s := x.String()
-		i, _ := strconv.ParseInt(s, 10, 64)
-		return i
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		i, _ := strconv.ParseInt(string(b), 10, 64)
-		return i
 	case error:
 		i, _ := strconv.ParseInt(x.Error(), 10, 64)
 		return i
@@ -69,6 +61,15 @@ func ToInt64(v interface{}) int64 {
 		return x.Int64()
 	case *big.Float:
 		i, _ := x.Int64()
+		return i
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		i, _ := strconv.ParseInt(string(b), 10, 64)
+		return i
+	case fmt.Stringer:
+		s := x.String()
+		i, _ := strconv.ParseInt(s, 10, 64)
 		return i
 
 	default:
@@ -181,14 +182,6 @@ func ToInt64Suffix(v interface{}) int64 {
 	case string:
 		i, _ := parseSuffixedInt(x)
 		return i
-	case fmt.Stringer:
-		s := x.String()
-		i, _ := parseSuffixedInt(s)
-		return i
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		i, _ := parseSuffixedInt(string(b))
-		return i
 	case error:
 		i, _ := parseSuffixedInt(x.Error())
 		return i
@@ -202,6 +195,15 @@ func ToInt64Suffix(v interface{}) int64 {
 		return x.Int64()
 	case *big.Float:
 		i, _ := x.Int64()
+		return i
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		i, _ := parseSuffixedInt(string(b))
+		return i
+	case fmt.Stringer:
+		s := x.String()
+		i, _ := parseSuffixedInt(s)
 		return i
 
 	default:

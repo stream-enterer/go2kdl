@@ -389,7 +389,7 @@ func unmarshalValueDuration(c *unmarshalContext, dest reflect.Value, iv interfac
 			d = time.Duration(f * float64(factor))
 		}
 	} else {
-		switch iv.(type) {
+		switch xv := iv.(type) {
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 			switch format {
 			case "base60":
@@ -405,7 +405,7 @@ func unmarshalValueDuration(c *unmarshalContext, dest reflect.Value, iv interfac
 				d = time.Duration(coerce.ToFloat64(iv) * float64(time.Second))
 			}
 		case document.SuffixedDecimal:
-			if d, err = iv.(document.SuffixedDecimal).AsDuration(); err != nil {
+			if d, err = xv.AsDuration(); err != nil {
 				return err
 			}
 		default:
@@ -638,7 +638,7 @@ func unmarshalNodeToStruct(c *unmarshalContext, node *document.Node, destStruct 
 		// assign as many arguments as possible to fields tagged with ",arg"
 		for _, fieldInfo := range argFieldInfo {
 			field := fieldInfo.GetValueFrom(destStruct)
-			field, err = withCreatedAndIndirected(field, func(field *reflect.Value) error {
+			_, err = withCreatedAndIndirected(field, func(field *reflect.Value) error {
 				f, err := setReflectValueFromIntf(c, *field, args[0].ResolvedValue(), fieldInfo.Format)
 				*field = f
 				return err
@@ -653,7 +653,7 @@ func unmarshalNodeToStruct(c *unmarshalContext, node *document.Node, destStruct 
 		if len(argsFieldInfo) > 0 {
 			fieldInfo := argsFieldInfo[0]
 			field := fieldInfo.GetValueFrom(destStruct)
-			field, err = withCreatedAndIndirected(field, func(slice *reflect.Value) error {
+			_, err = withCreatedAndIndirected(field, func(slice *reflect.Value) error {
 				sk := slice.Kind()
 				if sk != reflect.Slice && sk != reflect.Array {
 					return fmt.Errorf("cannot unmarshal arguments for %s into slice %s of non-slice type %s", node.Name.ValueString(), slice.Type().Name(), slice.Kind().String())
@@ -685,7 +685,7 @@ func unmarshalNodeToStruct(c *unmarshalContext, node *document.Node, destStruct 
 				continue
 			}
 			field := keyFieldInfo.GetValueFrom(destStruct)
-			if field, err = setReflectValueFromIntf(c, field, propVal.ResolvedValue(), keyFieldInfo.Format); err != nil {
+			if _, err = setReflectValueFromIntf(c, field, propVal.ResolvedValue(), keyFieldInfo.Format); err != nil {
 				return reflect.Value{}, err
 			}
 			handledProps++
@@ -714,7 +714,7 @@ func unmarshalNodeToStruct(c *unmarshalContext, node *document.Node, destStruct 
 				return reflect.Value{}, fmt.Errorf("%s is tagged ',props' and must be a map, but is a %s", destStruct.Type().Name(), reflect.Indirect(field).Kind().String())
 			}
 
-			field, err := withCreatedAndIndirected(field, func(mapField *reflect.Value) error {
+			_, err := withCreatedAndIndirected(field, func(mapField *reflect.Value) error {
 				createMapIfNil(*mapField, node.Properties.Len())
 
 				mapKeyType := mapField.Type().Key()
@@ -759,17 +759,17 @@ func unmarshalNodeToStruct(c *unmarshalContext, node *document.Node, destStruct 
 
 		switch fk {
 		case reflect.Map:
-			if field, err = unmarshalNodesToMap(c, node.Children, field, nil); err != nil {
+			if _, err = unmarshalNodesToMap(c, node.Children, field, nil); err != nil {
 				return reflect.Value{}, err
 			}
 		case reflect.Struct:
-			if field, err = unmarshalNodesToStruct(c, node.Children, field); err != nil {
+			if _, err = unmarshalNodesToStruct(c, node.Children, field); err != nil {
 				return reflect.Value{}, err
 			}
 		case reflect.Interface:
 			m := make(map[string]interface{})
 			field.Set(reflect.ValueOf(m))
-			if field, err = unmarshalNodesToMap(c, node.Children, field, nil); err != nil {
+			if _, err = unmarshalNodesToMap(c, node.Children, field, nil); err != nil {
 				return reflect.Value{}, err
 			}
 

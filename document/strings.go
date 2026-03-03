@@ -784,7 +784,7 @@ func parseMultilineRawString(b []byte) (string, error) {
 	}
 
 	// Step 1: Strip #""" / """# delimiters
-	openDelim := hashCount + 3 // hashes + """
+	openDelim := hashCount + 3  // hashes + """
 	closeDelim := 3 + hashCount // """ + hashes
 
 	if len(s) < openDelim+closeDelim {

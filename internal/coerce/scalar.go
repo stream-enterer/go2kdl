@@ -27,8 +27,8 @@ func IsScalarStrict(v interface{}) bool {
 }
 
 var (
-	reNumeric = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?([eE][0-9]+(\\.[0-9]+)?)?$")
-	reInteger = regexp.MustCompile("^[0-9]+$")
+	reNumeric = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?([eE][0-9]+(\.[0-9]+)?)?$`)
+	reInteger = regexp.MustCompile(`^[0-9]+$`)
 )
 
 func IsNumeric(v interface{}) bool {

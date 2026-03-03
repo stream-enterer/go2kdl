@@ -1028,47 +1028,7 @@ func TestExampleMarshal20(t *testing.T) {
 }
 
 func TestUnmarshalNginx(t *testing.T) {
-	return
-
-	// home, _ := os.UserHomeDir()
-	b, err := os.ReadFile("m:/nginx-sample.conf")
-	if err != nil {
-		t.Fatalf("failed to read nginx config: %v", err)
-	}
-
-	data := string(b)
-
-	type Location struct {
-		Args     []interface{}          `kdl:",args"`
-		Props    map[string]interface{} `kdl:",props"`
-		Children map[string]interface{} `kdl:",children"`
-	}
-	type Server struct {
-		Locations map[string]Location `kdl:"location,multiple"`
-	}
-	type HTTP struct {
-		Server []*Server `kdl:"server,multiple"`
-	}
-	type NginxServer struct {
-		HTTP *HTTP `kdl:"http"`
-	}
-
-	var ngx NginxServer
-	dec := NewDecoder(strings.NewReader(data))
-	dec.Options.RelaxedNonCompliant |= relaxed.NGINXSyntax
-	dec.Options.AllowUnhandledNodes = true
-
-	if err := dec.Decode(&ngx); err == nil {
-		// dump := spew.NewDefaultConfig()
-		// dump.Indent = "    "
-		// dump.DisablePointerAddresses = true
-		// dump.DisableMethods = true
-		// dump.DisablePointerMethods = true
-		// dump.Dump(ngx)
-	} else {
-		t.Fatalf("failed: %v\n", err)
-	}
-
+	t.Skip("requires external nginx sample file")
 }
 
 func TestUnmarshalTOMLYAMLAssn(t *testing.T) {

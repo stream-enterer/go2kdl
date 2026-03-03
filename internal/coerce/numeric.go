@@ -55,11 +55,6 @@ func ToNumeric(v interface{}) (i int64, f float64, isint bool) {
 		return stringToNumeric(string(x))
 	case string:
 		return stringToNumeric(x)
-	case fmt.Stringer:
-		return stringToNumeric(x.String())
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		return stringToNumeric(string(b))
 	case error:
 		return stringToNumeric(x.Error())
 
@@ -73,6 +68,12 @@ func ToNumeric(v interface{}) (i int64, f float64, isint bool) {
 	case *big.Float:
 		f, _ := x.Float64()
 		return 0, f, false
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		return stringToNumeric(string(b))
+	case fmt.Stringer:
+		return stringToNumeric(x.String())
 	default:
 		if ToBool(v) {
 			return 1, 0, true

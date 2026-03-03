@@ -48,7 +48,7 @@ func (s SuffixedDecimal) AsNumber() (interface{}, error) {
 		return 0, fmt.Errorf("invalid suffix: %s", string(s.Suffix))
 	}
 
-	multiplier := float64(1)
+	var multiplier float64
 	switch s.Suffix[0] {
 	case 'k', 'K':
 		multiplier = unit
@@ -96,7 +96,6 @@ func ParseSuffixedDecimal(b []byte) (SuffixedDecimal, error) {
 				suffixIndex = i
 			}
 			duration = true
-			break
 		case 'k', 'K', 'm', 'M', 'g', 'G', 't', 'T', 'p', 'P', 'b', 'B':
 			if suffixIndex == -1 {
 				suffixIndex = i

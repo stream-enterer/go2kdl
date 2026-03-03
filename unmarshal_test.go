@@ -695,76 +695,6 @@ var (
 	}
 )
 
-const kdlDuplicateNodes = `
-map-person "Bob" age=32 occupation=Lawyer
-map-person "Joe" age=52 occupation=Plumber
-
-struct-person "Bob" age=32 occupation=Lawyer
-struct-person "Joe" age=52 occupation=Plumber
-
-slice-person "Bob" age=32 occupation=Lawyer
-slice-person "Joe" age=52 occupation=Plumber
-
-overwrite-person "Bob" age=32 occupation=Lawyer
-overwrite-person "Joe" age=52 occupation=Plumber
-
-intf-person "Bob" age=32 occupation=Lawyer
-intf-person "Joe" age=52 occupation=Plumber
-`
-
-type testDuplicateNodes struct {
-	MapPerson    map[string]map[string]interface{} `kdl:"map-person,multiple"` // {"Bob":{"age":32,"occupation":"Lawyer"},...}
-	StructPerson map[string]struct {               // {"Bob":{...}, "Joe": {...}}
-		Args  []interface{}          `kdl:",args"`
-		Props map[string]interface{} `kdl:",props"`
-	} `kdl:"struct-person,multiple"`
-	SlicePerson []struct { // []{ {Args:[]{"Bob"},Props: {...}},  {Args:[]{"Joe"},Props: {...}} }
-		Args  []interface{}          `kdl:",args"`
-		Props map[string]interface{} `kdl:",props"`
-	} `kdl:"slice-person,multiple"`
-	OverwritePerson struct { // {Args:[]{"Joe"},Props: {...}},
-		Args  []interface{}          `kdl:",args"`
-		Props map[string]interface{} `kdl:",props"`
-	} `kdl:"overwrite-person"`
-	IntfPerson map[string]interface{} `kdl:"intf-person,multiple"` // {"Bob":{"age":32,"occupation":"Lawyer"},...}
-}
-
-var expectDuplicateNodes = testDuplicateNodes{
-	MapPerson: map[string]map[string]interface{}{
-		"Bob": {"age": 32, "occupation": "Lawyer"},
-		"Joe": {"age": 52, "occupation": "Plumber"},
-	},
-
-	StructPerson: map[string]struct {
-		Args  []interface{}          `kdl:",args"`
-		Props map[string]interface{} `kdl:",props"`
-	}{
-		"Bob": {Args: nil, Props: map[string]interface{}{"age": 32, "occupation": "Lawyer"}},
-		"Joe": {Args: nil, Props: map[string]interface{}{"age": 52, "occupation": "Plumber"}},
-	},
-
-	SlicePerson: []struct {
-		Args  []interface{}          `kdl:",args"`
-		Props map[string]interface{} `kdl:",props"`
-	}{
-		{Args: []interface{}{"Bob"}, Props: map[string]interface{}{"age": 32, "occupation": "Lawyer"}},
-		{Args: []interface{}{"Joe"}, Props: map[string]interface{}{"age": 52, "occupation": "Plumber"}},
-	},
-
-	OverwritePerson: struct {
-		Args  []interface{}          `kdl:",args"`
-		Props map[string]interface{} `kdl:",props"`
-	}{
-		Args:  []interface{}{"Joe"},
-		Props: map[string]interface{}{"age": 52, "occupation": "Plumber"},
-	},
-
-	IntfPerson: map[string]interface{}{
-		"Bob": map[string]interface{}{"age": 32, "occupation": "Lawyer"},
-		"Joe": map[string]interface{}{"age": 52, "occupation": "Plumber"},
-	},
-}
-
 const kdlUnmarshalKDLNode = `
 father "Bob" "Johnson" age=32 active=#true
 mother "Jane" "Johnson" age=28 active=#true
@@ -1081,12 +1011,6 @@ autoname "this is a test"
 explicit-name "another test"
 ignored "totally ignored"
 `
-
-var expectIgnoreField = testIgnoreField{
-	AutoName:     "automatic name",
-	ExplicitName: "explicit name",
-	Ignored:      "",
-}
 
 const kdlChildIntf = `
 location "@maintenance" {

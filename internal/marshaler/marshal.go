@@ -565,7 +565,8 @@ func marshalStructToNode(c *marshalContext, name string, structValue reflect.Val
 	}
 
 	// pull arguments from field tagged `,args`
-	for _, argsField := range argsFieldInfo {
+	if len(argsFieldInfo) > 0 {
+		argsField := argsFieldInfo[0]
 		slice := reflect.Indirect(argsField.GetValueFrom(structValue))
 		sk := slice.Kind()
 		if sk != reflect.Slice && sk != reflect.Array {
@@ -581,11 +582,11 @@ func marshalStructToNode(c *marshalContext, name string, structValue reflect.Val
 				return nil, err
 			}
 		}
-		break
 	}
 
 	// pull properties from field tagged `,props`
-	for _, propsField := range propsFieldInfo {
+	if len(propsFieldInfo) > 0 {
+		propsField := propsFieldInfo[0]
 		m := reflect.Indirect(propsField.GetValueFrom(structValue))
 		if m.Kind() != reflect.Map {
 			return nil, fmt.Errorf("non-map type %s tagged with ',props'", m.Kind().String())
@@ -600,8 +601,6 @@ func marshalStructToNode(c *marshalContext, name string, structValue reflect.Val
 				return nil, err
 			}
 		}
-
-		break
 	}
 
 	// pull properties from fields tagged with kdl property names
@@ -631,7 +630,8 @@ func marshalStructToNode(c *marshalContext, name string, structValue reflect.Val
 
 	// pull children from fields tagged with `,children`
 	node.ExpectChildren(len(childrenFieldInfo))
-	for _, childrenField := range childrenFieldInfo {
+	if len(childrenFieldInfo) > 0 {
+		childrenField := childrenFieldInfo[0]
 		if children, err := marshalValueToNodes(c, childrenField.GetValueFrom(structValue)); err != nil {
 			return nil, err
 		} else if node.Children == nil {
@@ -639,7 +639,6 @@ func marshalStructToNode(c *marshalContext, name string, structValue reflect.Val
 		} else {
 			node.Children = append(node.Children, children...)
 		}
-		break
 	}
 
 	return node, nil

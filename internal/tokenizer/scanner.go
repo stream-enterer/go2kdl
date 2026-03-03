@@ -17,9 +17,6 @@ var (
 	ErrEndOfToken  = errors.New("unexpected end of token")
 )
 
-// markedReaderPosition represents a copy of the Scanner.input slice at a given position in the stream
-type markedReaderPosition int
-
 // peeked represents a character peeked from the input buffer and the number of bytes it occupied in the buffer
 type peeked struct {
 	c    rune
@@ -231,7 +228,6 @@ func (s *Scanner) skip() {
 func (s *Scanner) pushMark() {
 	pos := len(s.raw) - len(s.input)
 	s.marks = append(s.marks, pos)
-	return
 }
 
 // popMark pops the last marked position from the mark stack

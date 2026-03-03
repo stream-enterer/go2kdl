@@ -45,11 +45,6 @@ func ToString(v interface{}) string {
 		return string(x)
 	case string:
 		return x
-	case fmt.Stringer:
-		return x.String()
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		return string(b)
 	case error:
 		return x.Error()
 
@@ -61,6 +56,12 @@ func ToString(v interface{}) string {
 	case *big.Int:
 		return x.String()
 	case *big.Float:
+		return x.String()
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		return string(b)
+	case fmt.Stringer:
 		return x.String()
 
 	case bool:

@@ -61,14 +61,9 @@ func ToBool(v interface{}) bool {
 		return boolString(string(x))
 	case string:
 		return boolString(x)
-	case fmt.Stringer:
-		return boolString(x.String())
 	case nil:
 		return false
 
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		return boolString(string(b))
 	case time.Time:
 		return !x.IsZero()
 
@@ -82,6 +77,12 @@ func ToBool(v interface{}) bool {
 	case *big.Float:
 		f, _ := x.Float64()
 		return f != 0
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		return boolString(string(b))
+	case fmt.Stringer:
+		return boolString(x.String())
 	default:
 		return false
 	}

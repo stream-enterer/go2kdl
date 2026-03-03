@@ -48,14 +48,6 @@ func ToFloat64(v interface{}) float64 {
 	case string:
 		f, _ := strconv.ParseFloat(x, 64)
 		return f
-	case fmt.Stringer:
-		s := x.String()
-		f, _ := strconv.ParseFloat(s, 64)
-		return f
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		f, _ := strconv.ParseFloat(string(b), 64)
-		return f
 	case error:
 		f, _ := strconv.ParseFloat(x.Error(), 64)
 		return f
@@ -73,6 +65,15 @@ func ToFloat64(v interface{}) float64 {
 		return f
 	case *big.Float:
 		f, _ := x.Float64()
+		return f
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		f, _ := strconv.ParseFloat(string(b), 64)
+		return f
+	case fmt.Stringer:
+		s := x.String()
+		f, _ := strconv.ParseFloat(s, 64)
 		return f
 
 	default:
@@ -151,14 +152,6 @@ func ToFloat64Suffix(v interface{}) float64 {
 	case string:
 		f, _ := parseSuffixedFloat(x)
 		return f
-	case fmt.Stringer:
-		s := x.String()
-		f, _ := parseSuffixedFloat(s)
-		return f
-	case encoding.TextMarshaler:
-		b, _ := x.MarshalText()
-		f, _ := parseSuffixedFloat(string(b))
-		return f
 	case error:
 		f, _ := parseSuffixedFloat(x.Error())
 		return f
@@ -176,6 +169,15 @@ func ToFloat64Suffix(v interface{}) float64 {
 		return f
 	case *big.Float:
 		f, _ := x.Float64()
+		return f
+
+	case encoding.TextMarshaler:
+		b, _ := x.MarshalText()
+		f, _ := parseSuffixedFloat(string(b))
+		return f
+	case fmt.Stringer:
+		s := x.String()
+		f, _ := parseSuffixedFloat(s)
 		return f
 
 	default:

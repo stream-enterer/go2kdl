@@ -33,7 +33,7 @@ type ParseContext struct {
 	// document being generated
 	doc *document.Document
 	// state stack; current state is pushed onto this when a child block is encountered
-	states             []parserState
+	states              []parserState
 	childBlockSeenStack []bool
 	// current state
 	state parserState

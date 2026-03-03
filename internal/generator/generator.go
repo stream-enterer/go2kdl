@@ -46,23 +46,6 @@ func New(w io.Writer) *Generator {
 	return NewOptions(w, DefaultOptions)
 }
 
-// generateNode generates the KDL for a single Node (and its children by recursively calling itself) and returns a non-
-// nil error on failure
-func (g *Generator) generateNode(n *document.Node, leadingTrailingSpace, nameAndType bool) error {
-	opts := document.NodeWriteOptions{
-		LeadingTrailingSpace: leadingTrailingSpace,
-		NameAndType:          nameAndType,
-		Depth:                g.depth,
-		Indent:               []byte(g.options.Indent),
-		IgnoreFlags:          g.options.IgnoreFlags,
-		AddSemicolons:        g.options.AddSemicolons,
-		AddEquals:            g.options.AddEquals,
-		AddColons:            g.options.AddColons,
-	}
-	_, err := n.WriteToOptions(g.w, opts)
-	return err
-}
-
 // generateNodes generates the KDL for a slice of Nodes and returns a non-nil error on failure
 func (g *Generator) generateNodes(nodes []*document.Node) error {
 	opts := document.NodeWriteOptions{

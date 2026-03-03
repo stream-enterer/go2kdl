@@ -48,8 +48,6 @@ type Value struct {
 type valueOpts int
 
 const (
-	// if a string was originally quoted or raw, output it quoted; if bare, output bare if possible, otherwise quoted (default)
-	voTranslateStringFlags valueOpts = 0
 	// if a numeric value was originally in octal, binary, or hex representation, output it the same way
 	voUseNumericFlags valueOpts = 1 << iota
 	// if a string was originally in raw, quoted, or bare representation, try to output it the same way with fallback to quoted

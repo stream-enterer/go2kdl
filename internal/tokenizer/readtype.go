@@ -15,13 +15,6 @@ func (s *Scanner) readWhitespace() []byte {
 	return ws
 }
 
-// skipWhitespace skips zero or more whitespace characters from the current position, and returns a non-nil error on
-// failure
-func (s *Scanner) skipWhitespace() error {
-	_, err := s.readWhile(isWhiteSpace, 0)
-	return err
-}
-
 // readMultiLineComment reads and returns a multiline comment from the current position, supporting nested /* and */
 // sequences. It returns a non-nil error on failure.
 func (s *Scanner) readMultiLineComment() ([]byte, error) {
@@ -58,47 +51,6 @@ func (s *Scanner) readMultiLineComment() ([]byte, error) {
 	}
 }
 
-// skipUntilNewline skips all characters from the current position until the next newline. It returns a non-nil error on
-// failure.
-func (s *Scanner) skipUntilNewline() error {
-	escaped := false
-	for {
-		c, err := s.get()
-		if err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		switch c {
-		case '\\':
-			escaped = true
-			if err := s.skipWhitespace(); err != nil {
-				return err
-			}
-		case '\r':
-			// swallow error on peek, as it's still a valid newline if \r is not followed by \n
-			if c, err := s.peek(); err == nil && c == '\n' {
-				s.skip()
-			}
-			if escaped {
-				escaped = false
-			} else {
-				return nil
-			}
-
-		case '\n', '\u000B', '\u0085', '\u000c', '\u2028', '\u2029':
-			if escaped {
-				escaped = false
-			} else {
-				return nil
-			}
-		default:
-			escaped = false
-		}
-	}
-}
-
 // readSingleLineComment reads and returns a single-line comment from the current position, or a non-nil error on
 // failure.
 func (s *Scanner) readSingleLineComment() ([]byte, error) {
@@ -107,127 +59,6 @@ func (s *Scanner) readSingleLineComment() ([]byte, error) {
 		err = nil
 	}
 	return literal, err
-}
-
-// readRawString reads and returns a KDLv2 raw string from the input, or returns a non-nil error on failure.
-// KDLv2 raw strings use the syntax #"..."# (with one or more # on each side).
-// Also handles multiline raw strings: #"""..."""# (triple-quote variant).
-// The caller has already peeked at the initial '#' but NOT consumed it.
-// Returns the token ID (RawString or MultilineRawString), the raw bytes, and an error.
-func (s *Scanner) readRawString(startHashes int) (TokenID, []byte, error) {
-	s.pushMark()
-	defer s.popMark()
-
-	var (
-		c   rune
-		err error
-	)
-
-	// Consume the leading hashes
-	for i := 0; i < startHashes; i++ {
-		if c, err = s.get(); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return Unknown, nil, err
-		}
-		if c != '#' {
-			return Unknown, nil, fmt.Errorf("unexpected character %c", c)
-		}
-	}
-
-	// Consume the opening quote
-	if c, err = s.get(); err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-		return Unknown, nil, err
-	}
-	if c != '"' {
-		return Unknown, nil, fmt.Errorf("unexpected character %c", c)
-	}
-
-	// Check if this is a triple-quoted (multiline) raw string: #"""..."""#
-	isMultiline := false
-	if c2, err2 := s.peek(); err2 == nil && c2 == '"' {
-		// Might be triple-quote - peek further
-		if _, c3, err3 := s.peekTwo(); err3 == nil && c3 == '"' {
-			// It's triple-quoted: consume the two remaining opening quotes
-			s.skip() // second "
-			s.skip() // third "
-			isMultiline = true
-		}
-	}
-
-	tokenID := RawString
-	if isMultiline {
-		tokenID = MultilineRawString
-	}
-
-	if isMultiline {
-		// For multiline raw strings, we need to find """  followed by startHashes #'s
-		consecutiveQuotes := 0
-		for {
-			if c, err = s.get(); err != nil {
-				if err == io.EOF {
-					err = io.ErrUnexpectedEOF
-				}
-				return Unknown, nil, err
-			}
-			if c == '"' {
-				consecutiveQuotes++
-				if consecutiveQuotes >= 3 {
-					// Check if followed by the right number of hashes
-					matched := 0
-					for matched < startHashes {
-						if nc, nerr := s.peek(); nerr == nil && nc == '#' {
-							s.skip()
-							matched++
-						} else {
-							break
-						}
-					}
-					if matched == startHashes {
-						return tokenID, s.copyFromMark(), nil
-					}
-					// Not enough hashes - the quotes and partial hashes are content, keep going
-					consecutiveQuotes = 0
-				}
-			} else {
-				consecutiveQuotes = 0
-			}
-		}
-	}
-
-	// Single-line raw string: find closing " followed by startHashes #'s
-	// KDLv2: literal newlines are NOT allowed in single-line raw strings (use triple-quoted multiline raw strings)
-	for {
-		if c, err = s.get(); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return Unknown, nil, err
-		}
-		if c == '"' {
-			// Check if followed by the right number of hashes
-			matched := 0
-			for matched < startHashes {
-				if nc, nerr := s.peek(); nerr == nil && nc == '#' {
-					s.skip()
-					matched++
-				} else {
-					break
-				}
-			}
-			if matched == startHashes {
-				return tokenID, s.copyFromMark(), nil
-			}
-			// Not the closing sequence - the quote and partial hashes are content
-		}
-		if isNewline(c) {
-			return Unknown, nil, fmt.Errorf("literal newlines are not allowed in single-line raw strings; use a multiline raw string (triple-quoted) instead")
-		}
-	}
 }
 
 // readQuotedString reads and returns a quoted string from the current position.

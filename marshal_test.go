@@ -215,10 +215,9 @@ father "\"Bob\""
 mother "\"Jane\""
 `
 
-	kdlOutputMarshalKDLNode = `
-father "BOB" "JOHNSON" active=#true age=32
-mother "JANE" "JOHNSON" active=#true age=28
-`
+	// kdlOutputMarshalKDLNode uses the build-tag-conditional expected value
+	// defined in marshal_kdlnode_expect_test.go / marshal_kdlnode_expect_unordered_test.go.
+	kdlOutputMarshalKDLNode = kdlOutputMarshalKDLNodeExpected
 
 	kdlOutputMarshalTextValue = `
 father firstname="BOB" lastname="JOHNSON"
@@ -278,7 +277,7 @@ var srcIgnoreField = testIgnoreField{
 	Ignored:      "omit me, please",
 }
 
-// TestMarshalSuite should be run with `-tags kdldeterministic` to avoid false failures due to nondeterministic map order
+// TestMarshalSuite may need `-tags kdlunordered` disabled (default) to avoid false failures due to nondeterministic map order
 func TestMarshalSuite(t *testing.T) {
 	var (
 		expectSingleArgMapIntf interface{} = expectSingleArgMap

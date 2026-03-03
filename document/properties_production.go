@@ -1,8 +1,8 @@
-//go:build !kdldeterministic
+//go:build kdlunordered
 
 //
-// properties_unordered.go could otherwise be implemented as a simple map, but provides additional methods to make it a
-// drop-in replacement for properties_ordered.go for use during testing.
+// properties_unordered.go provides a simple map-based Properties type.
+// This is the opt-in variant; enable with -tags kdlunordered.
 
 package document
 
@@ -50,6 +50,16 @@ func (p Properties) Add(name string, val *Value) {
 // Exist indicates whether any properties exist
 func (p Properties) Exist() bool {
 	return len(p) > 0
+}
+
+// Delete removes the property with the given name and returns true,
+// or returns false if no such property exists.
+func (p Properties) Delete(name string) bool {
+	if _, exists := p[name]; !exists {
+		return false
+	}
+	delete(p, name)
+	return true
 }
 
 // sortedKeys returns the keys of the property map in sorted order for deterministic output

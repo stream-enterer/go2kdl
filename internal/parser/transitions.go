@@ -179,6 +179,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				}
 			}
 
+			c.leaveChildrenBlock()
 			_, err := c.popState()
 			return err
 		},
@@ -227,7 +228,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 			if c.continuation {
 				return nil
 			} else {
-				_, _, err := c.popNodeAndState()
+				_, _, err := c.popNodeAndStateAt(c.tokenEndOffset(t))
 				return err
 			}
 		},
@@ -241,12 +242,13 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				c.ignoreChildren++
 			}
 			c.childBlockSeen = true
+			c.enterChildrenBlock(t.Offset)
 			c.pushState(stateChildren)
 			return nil
 		},
 		tokenizer.BraceClose: func(c *ParseContext, t tokenizer.Token) error {
 			// End the current node
-			_, _, err := c.popNodeAndState()
+			_, _, err := c.popNodeAndStateAt(t.Offset)
 			if err != nil {
 				return err
 			}
@@ -255,6 +257,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				if c.ignoreChildren > 0 {
 					c.ignoreChildren--
 				}
+				c.leaveChildrenBlock()
 				_, err = c.popState()
 				return err
 			}
@@ -365,6 +368,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				c.ignoreChildren++
 			}
 			c.childBlockSeen = true
+			c.enterChildrenBlock(t.Offset)
 			c.pushState(stateChildren)
 			return nil
 		},
@@ -382,7 +386,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 			} else if c.typeAnnot.Valid() {
 				return fmt.Errorf("expected value after type, found %s in state %s", t.ID, c.state)
 			} else {
-				_, _, err := c.popNodeAndState()
+				_, _, err := c.popNodeAndStateAt(c.tokenEndOffset(t))
 				return err
 			}
 		},
@@ -400,13 +404,13 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				c.state = stateNodeParams
 				return nil
 			} else {
-				_, _, err := c.popNodeAndState()
+				_, _, err := c.popNodeAndStateAt(c.tokenEndOffset(t))
 				return err
 			}
 		},
 		tokenizer.BraceClose: func(c *ParseContext, t tokenizer.Token) error {
 			// End the current node
-			_, _, err := c.popNodeAndState()
+			_, _, err := c.popNodeAndStateAt(t.Offset)
 			if err != nil {
 				return err
 			}
@@ -415,6 +419,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				if c.ignoreChildren > 0 {
 					c.ignoreChildren--
 				}
+				c.leaveChildrenBlock()
 				_, err = c.popState()
 				return err
 			}
@@ -482,6 +487,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 			}
 
 			c.childBlockSeen = true
+			c.enterChildrenBlock(t.Offset)
 			c.pushState(stateChildren)
 			return nil
 		},
@@ -535,7 +541,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 			}
 
 			// and the node is done
-			_, _, err := c.popNodeAndState()
+			_, _, err := c.popNodeAndStateAt(c.tokenEndOffset(t))
 			return err
 		},
 		tokenizer.BraceClose: func(c *ParseContext, t tokenizer.Token) error {
@@ -550,7 +556,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				c.ident.Clear()
 			}
 			// End the current node
-			_, _, err := c.popNodeAndState()
+			_, _, err := c.popNodeAndStateAt(t.Offset)
 			if err != nil {
 				return err
 			}
@@ -559,6 +565,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				if c.ignoreChildren > 0 {
 					c.ignoreChildren--
 				}
+				c.leaveChildrenBlock()
 				_, err = c.popState()
 				return err
 			}
@@ -653,6 +660,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 			}
 
 			c.childBlockSeen = true
+			c.enterChildrenBlock(t.Offset)
 			c.pushState(stateChildren)
 			return nil
 		},
@@ -671,7 +679,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				c.ident.Clear()
 			}
 
-			_, _, err := c.popNodeAndState()
+			_, _, err := c.popNodeAndStateAt(c.tokenEndOffset(t))
 			return err
 		},
 		tokenizer.TokenComment: func(c *ParseContext, t tokenizer.Token) error {
@@ -728,7 +736,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				c.ident.Clear()
 			}
 			// End the current node
-			_, _, err := c.popNodeAndState()
+			_, _, err := c.popNodeAndStateAt(t.Offset)
 			if err != nil {
 				return err
 			}
@@ -737,6 +745,7 @@ var stateTransitions = map[parserState]map[tokenizer.TokenID]stateTransitionFunc
 				if c.ignoreChildren > 0 {
 					c.ignoreChildren--
 				}
+				c.leaveChildrenBlock()
 				_, err = c.popState()
 				return err
 			}

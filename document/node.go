@@ -35,6 +35,10 @@ type Node struct {
 	// Span is the position of the node name in source (zero if unavailable,
 	// e.g. programmatically constructed nodes).
 	Span Span
+	// Raw holds the original source text for this node (including leading trivia,
+	// arguments, properties, children block, and terminator). When non-nil and the
+	// node has not been mutated, the generator emits these bytes verbatim.
+	Raw *RawSegment
 }
 
 func (n *Node) ShallowCopy() *Node {
@@ -64,6 +68,43 @@ func (n *Node) ExpectArguments(count int) {
 // AddNode adds a Node as a child of this node
 func (n *Node) AddNode(child *Node) {
 	n.Children = append(n.Children, child)
+	n.Raw = nil
+}
+
+// FindNode returns the first direct child with the given name, or nil.
+func (n *Node) FindNode(name string) *Node {
+	for _, child := range n.Children {
+		if child.Name != nil && child.Name.ValueString() == name {
+			return child
+		}
+	}
+	return nil
+}
+
+// FindNodeRecursive returns the first descendant (DFS) with the given name, or nil.
+func (n *Node) FindNodeRecursive(name string) *Node {
+	for _, child := range n.Children {
+		if child.Name != nil && child.Name.ValueString() == name {
+			return child
+		}
+		if found := child.FindNodeRecursive(name); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// RemoveNode removes the first direct child with the given name and returns true,
+// or returns false if no child with that name exists. Nils the parent's Raw.
+func (n *Node) RemoveNode(name string) bool {
+	for i, child := range n.Children {
+		if child.Name != nil && child.Name.ValueString() == name {
+			n.Children = append(n.Children[:i], n.Children[i+1:]...)
+			n.Raw = nil
+			return true
+		}
+	}
+	return false
 }
 
 // NewNode creates and returns a new Node
@@ -74,6 +115,7 @@ func NewNode() *Node {
 // SetName sets the name of the node
 func (n *Node) SetName(name string) {
 	n.Name = &Value{Value: name}
+	n.Raw = nil
 }
 
 // SetNameToken sets the name of the node from a Token, and returns a non-nil error on failure
@@ -84,6 +126,7 @@ func (n *Node) SetNameToken(t tokenizer.Token) error {
 	}
 	n.Name = v
 	n.Span = v.Span
+	n.Raw = nil
 	return nil
 }
 
@@ -95,6 +138,7 @@ func (n *Node) AddArgument(value interface{}, typeAnnot TypeAnnotation) *Value {
 		Type:  typeAnnot,
 	}
 	n.Arguments = append(n.Arguments, v)
+	n.Raw = nil
 	return v
 }
 
@@ -109,6 +153,7 @@ func (n *Node) AddArgumentToken(t tokenizer.Token, typeAnnot tokenizer.Token) er
 		v.Type = TypeAnnotation(typeAnnot.Data)
 	}
 	n.Arguments = append(n.Arguments, v)
+	n.Raw = nil
 	return nil
 }
 
@@ -124,6 +169,7 @@ func (n *Node) AddProperty(name string, value interface{}, typeAnnot TypeAnnotat
 		n.Properties.Alloc()
 	}
 	n.Properties.Add(name, v)
+	n.Raw = nil
 	return v
 }
 
@@ -132,6 +178,7 @@ func (n *Node) AddPropertyValue(name string, value *Value, typeAnnot TypeAnnotat
 		n.Properties.Alloc()
 	}
 	n.Properties.Add(name, value)
+	n.Raw = nil
 	return value
 }
 
@@ -154,6 +201,7 @@ func (n *Node) AddPropertyToken(name tokenizer.Token, value tokenizer.Token, typ
 		n.Properties.Alloc()
 	}
 	n.Properties.Add(nt.ValueString(), vt)
+	n.Raw = nil
 
 	return vt, nil
 }
@@ -176,6 +224,8 @@ type NodeWriteOptions struct {
 	AddEquals bool
 	// AddEquals causes ':' symbols to be inserted between nodes and their values, which is noncompliant with the KDL spec
 	AddColons bool
+	// PreserveFormatting emits Raw source bytes for values that haven't been mutated
+	PreserveFormatting bool
 }
 
 var defaultNodeWriteOptions = NodeWriteOptions{
@@ -313,13 +363,18 @@ func (n *Node) WriteToOptions(w io.Writer, opts NodeWriteOptions) (int64, error)
 			write([]byte{' '})
 		}
 		if err == nil {
-			// arguments must always be quoted
-			if opts.IgnoreFlags {
+			if opts.PreserveFormatting && arg.Raw != nil {
+				if len(arg.Type) > 0 {
+					write([]byte{'('})
+					write([]byte(arg.Type))
+					write([]byte{')'})
+				}
+				write(arg.Raw.Bytes)
+			} else if opts.IgnoreFlags {
 				write([]byte(arg.UnformattedString()))
 			} else {
 				write([]byte(arg.FormattedString()))
 			}
-
 		}
 	}
 	if n.Properties.Exist() && err == nil {

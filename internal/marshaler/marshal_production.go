@@ -1,4 +1,4 @@
-//go:build !kdldeterministic
+//go:build kdlunordered
 
 package marshaler
 

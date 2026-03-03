@@ -45,7 +45,17 @@ type Value struct {
 	// Span is the position of this value in source (zero if unavailable,
 	// e.g. programmatically constructed values).
 	Span Span
+	// Raw holds the original source text for this value token (including type
+	// annotation if present). When non-nil and the value has not been mutated,
+	// the generator can emit these bytes verbatim.
+	Raw *RawSegment
 }
+
+// SetValue updates the value and nils the Raw segment to mark it as dirty.
+func (v *Value) SetValue(val interface{}) { v.Value = val; v.Raw = nil }
+
+// SetType updates the type annotation and nils the Raw segment to mark it as dirty.
+func (v *Value) SetType(t TypeAnnotation) { v.Type = t; v.Raw = nil }
 
 // valueOpts specify options for rendering Values as strings
 type valueOpts int
@@ -467,6 +477,11 @@ func ValueFromToken(t tokenizer.Token) (*Value, error) {
 	}
 	if err != nil {
 		err = fmt.Errorf("value from token: %w", err)
+	}
+
+	// Preserve the raw token bytes for format-preserving output.
+	if len(t.Data) > 0 {
+		v.Raw = &RawSegment{Bytes: t.Data}
 	}
 
 	return v, err

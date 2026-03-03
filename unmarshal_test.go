@@ -1135,7 +1135,7 @@ func TestUnmarshalMapTimes(t *testing.T) {
 	}
 }
 
-// TestUnmarshalSuite should be run with `-tags kdldeterministic` to avoid false failures due to nondeterministic map order
+// TestUnmarshalSuite may need `-tags kdlunordered` disabled (default) to avoid false failures due to nondeterministic map order
 func TestUnmarshalSuite(t *testing.T) {
 	var (
 		intf                   interface{}

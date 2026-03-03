@@ -19,6 +19,9 @@ type Options struct {
 	AddEquals bool
 	// AddColon causes ':' symbols to be inserted between nodes and their values, which is noncompliant with the KDL spec
 	AddColons bool
+	// PreserveFormatting emits the Raw source bytes for nodes/values that haven't been mutated,
+	// preserving original whitespace, comments, quoting style, and number formatting.
+	PreserveFormatting bool
 }
 
 // Generator generates a KDL document from a parsed Document
@@ -57,11 +60,18 @@ func (g *Generator) generateNodes(nodes []*document.Node) error {
 		AddSemicolons:        g.options.AddSemicolons,
 		AddEquals:            g.options.AddEquals,
 		AddColons:            g.options.AddColons,
+		PreserveFormatting:   g.options.PreserveFormatting,
 	}
 
 	for _, node := range nodes {
-		if _, err := node.WriteToOptions(g.w, opts); err != nil {
-			return err
+		if g.options.PreserveFormatting && node.Raw != nil {
+			if _, err := g.w.Write(node.Raw.Bytes); err != nil {
+				return err
+			}
+		} else {
+			if _, err := node.WriteToOptions(g.w, opts); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -69,5 +79,12 @@ func (g *Generator) generateNodes(nodes []*document.Node) error {
 
 // Generate generates the KDL for a Document, and returns a non-nil error on failure
 func (g *Generator) Generate(d *document.Document) error {
-	return g.generateNodes(d.Nodes)
+	if err := g.generateNodes(d.Nodes); err != nil {
+		return err
+	}
+	if g.options.PreserveFormatting && len(d.TrailingBytes) > 0 {
+		_, err := g.w.Write(d.TrailingBytes)
+		return err
+	}
+	return nil
 }

@@ -28,7 +28,13 @@ func parse(s *tokenizer.Scanner) (*document.Document, error) {
 		return nil, toError(s.Err())
 	}
 
-	return c.Document(), nil
+	doc := c.Document()
+	src := s.Raw()
+	doc.Source = src
+	if end := c.LastNodeEnd(); end < len(src) {
+		doc.TrailingBytes = src[end:]
+	}
+	return doc, nil
 }
 
 // toError converts internal scanner/parser errors to *Error.
@@ -78,6 +84,22 @@ func ParseWithOptions(r io.Reader, opts ParseOptions) (*document.Document, error
 type GenerateOptions = generator.Options
 
 var DefaultGenerateOptions = generator.DefaultOptions
+
+// Autoformat parses a KDL document from r and writes a freshly formatted version to w.
+func Autoformat(r io.Reader, w io.Writer) error {
+	return AutoformatWithOptions(r, w, DefaultGenerateOptions)
+}
+
+// AutoformatWithOptions parses a KDL document from r and writes a freshly formatted version to w
+// using the given options. PreserveFormatting is forced to false.
+func AutoformatWithOptions(r io.Reader, w io.Writer, opts GenerateOptions) error {
+	doc, err := Parse(r)
+	if err != nil {
+		return err
+	}
+	opts.PreserveFormatting = false
+	return GenerateWithOptions(doc, w, opts)
+}
 
 // Generate writes to w a well-formatted KDL document generated from doc, or a non-nil error on failure
 func Generate(doc *document.Document, w io.Writer) error {

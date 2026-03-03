@@ -1,9 +1,8 @@
-//go:build kdldeterministic
+//go:build !kdlunordered
 
 //
-// properties_ordered.go provides a deterministic version of the Properties type to ensure that output is always
-// consistent during testing; it is slower and more memory-hungry than properties_unordered.go and thus is disabled by
-// default; enable with -tags kdldeterministic
+// properties_ordered.go provides an insertion-order-preserving version of the Properties type.
+// This is the default implementation. Use -tags kdlunordered to switch to the unordered map variant.
 
 package document
 
@@ -46,6 +45,22 @@ func (p *Properties) Add(name string, val *Value) {
 
 func (p *Properties) Exist() bool {
 	return len(p.order) > 0
+}
+
+// Delete removes the property with the given name and returns true,
+// or returns false if no such property exists.
+func (p *Properties) Delete(name string) bool {
+	if _, exists := p.props[name]; !exists {
+		return false
+	}
+	delete(p.props, name)
+	for i, k := range p.order {
+		if k == name {
+			p.order = append(p.order[:i], p.order[i+1:]...)
+			break
+		}
+	}
+	return true
 }
 
 func (p *Properties) String() string {

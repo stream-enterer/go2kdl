@@ -9,9 +9,9 @@ func Test_rawString(t *testing.T) {
 		s    string
 		want string
 	}{
-		{`This is a test`, `r"This is a test"`},
-		{`This "is" a test`, `r#"This "is" a test"#`},
-		{`This #"is"# a test`, `r##"This #"is"# a test"##`},
+		{`This is a test`, `#"This is a test"#`},
+		{`This "is" a test`, `#"This "is" a test"#`},
+		{`This #"is"# a test`, `##"This #"is"# a test"##`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.s, func(t *testing.T) {
@@ -28,7 +28,7 @@ func Test_parseRawString(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{`r#"[id="node-node"]"#`, `[id="node-node"]`, false},
+		{`#"[id="node-node"]"#`, `[id="node-node"]`, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.s, func(t *testing.T) {

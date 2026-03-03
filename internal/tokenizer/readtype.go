@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sblinch/kdl-go/relaxed"
+	"github.com/ar-go/go2kdl/relaxed"
 )
 
 // readWhitespace reads all whitespace starting from the current position. It does not return an error as in practice it
@@ -87,7 +87,7 @@ func (s *Scanner) skipUntilNewline() error {
 				return nil
 			}
 
-		case '\n', '\u0085', '\u000c', '\u2028', '\u2029':
+		case '\n', '\u000B', '\u0085', '\u000c', '\u2028', '\u2029':
 			if escaped {
 				escaped = false
 			} else {
@@ -109,8 +109,12 @@ func (s *Scanner) readSingleLineComment() ([]byte, error) {
 	return literal, err
 }
 
-// readRawString reads and returns a raw string from the input, or returns a non-nil error on failure
-func (s *Scanner) readRawString() ([]byte, error) {
+// readRawString reads and returns a KDLv2 raw string from the input, or returns a non-nil error on failure.
+// KDLv2 raw strings use the syntax #"..."# (with one or more # on each side).
+// Also handles multiline raw strings: #"""..."""# (triple-quote variant).
+// The caller has already peeked at the initial '#' but NOT consumed it.
+// Returns the token ID (RawString or MultilineRawString), the raw bytes, and an error.
+func (s *Scanner) readRawString(startHashes int) (TokenID, []byte, error) {
 	s.pushMark()
 	defer s.popMark()
 
@@ -119,68 +123,223 @@ func (s *Scanner) readRawString() ([]byte, error) {
 		err error
 	)
 
-	startHashes := 0
+	// Consume the leading hashes
+	for i := 0; i < startHashes; i++ {
+		if c, err = s.get(); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return Unknown, nil, err
+		}
+		if c != '#' {
+			return Unknown, nil, fmt.Errorf("unexpected character %c", c)
+		}
+	}
 
+	// Consume the opening quote
 	if c, err = s.get(); err != nil {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
-		return nil, err
+		return Unknown, nil, err
 	}
-	if c != 'r' {
-		return nil, fmt.Errorf("unexpected character %c", c)
+	if c != '"' {
+		return Unknown, nil, fmt.Errorf("unexpected character %c", c)
 	}
 
-hashLoop:
-	for {
-		if c, err = s.get(); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return nil, err
-		}
-		switch c {
-		case '"':
-			break hashLoop
-		case '#':
-			startHashes++
-		default:
-			return nil, fmt.Errorf("unexpected character %c", c)
+	// Check if this is a triple-quoted (multiline) raw string: #"""..."""#
+	isMultiline := false
+	if c2, err2 := s.peek(); err2 == nil && c2 == '"' {
+		// Might be triple-quote - peek further
+		if _, c3, err3 := s.peekTwo(); err3 == nil && c3 == '"' {
+			// It's triple-quoted: consume the two remaining opening quotes
+			s.skip() // second "
+			s.skip() // third "
+			isMultiline = true
 		}
 	}
 
-	foundQuote := false
-	endHashes := 0
-	for {
-		if c, err = s.get(); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return nil, err
-		}
-		if foundQuote {
-			if c == '#' {
-				endHashes++
-				if endHashes == startHashes {
-					return s.copyFromMark(), nil
+	tokenID := RawString
+	if isMultiline {
+		tokenID = MultilineRawString
+	}
+
+	if isMultiline {
+		// For multiline raw strings, we need to find """  followed by startHashes #'s
+		consecutiveQuotes := 0
+		for {
+			if c, err = s.get(); err != nil {
+				if err == io.EOF {
+					err = io.ErrUnexpectedEOF
 				}
-			} else if c == '"' {
-				endHashes = 0
+				return Unknown, nil, err
+			}
+			if c == '"' {
+				consecutiveQuotes++
+				if consecutiveQuotes >= 3 {
+					// Check if followed by the right number of hashes
+					matched := 0
+					for matched < startHashes {
+						if nc, nerr := s.peek(); nerr == nil && nc == '#' {
+							s.skip()
+							matched++
+						} else {
+							break
+						}
+					}
+					if matched == startHashes {
+						return tokenID, s.copyFromMark(), nil
+					}
+					// Not enough hashes - the quotes and partial hashes are content, keep going
+					consecutiveQuotes = 0
+				}
 			} else {
-				foundQuote = false
-				endHashes = 0
+				consecutiveQuotes = 0
 			}
-		} else if c == '"' {
-			foundQuote = true
-			if startHashes == 0 {
-				return s.copyFromMark(), nil
+		}
+	}
+
+	// Single-line raw string: find closing " followed by startHashes #'s
+	// KDLv2: literal newlines are NOT allowed in single-line raw strings (use triple-quoted multiline raw strings)
+	for {
+		if c, err = s.get(); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
 			}
+			return Unknown, nil, err
+		}
+		if c == '"' {
+			// Check if followed by the right number of hashes
+			matched := 0
+			for matched < startHashes {
+				if nc, nerr := s.peek(); nerr == nil && nc == '#' {
+					s.skip()
+					matched++
+				} else {
+					break
+				}
+			}
+			if matched == startHashes {
+				return tokenID, s.copyFromMark(), nil
+			}
+			// Not the closing sequence - the quote and partial hashes are content
+		}
+		if isNewline(c) {
+			return Unknown, nil, fmt.Errorf("literal newlines are not allowed in single-line raw strings; use a multiline raw string (triple-quoted) instead")
 		}
 	}
 }
 
-func (s *Scanner) readQuotedString() ([]byte, error) {
-	return s.readQuotedStringQ('"')
+// readQuotedString reads and returns a quoted string from the current position.
+// It also handles KDLv2 triple-quoted multiline strings (""" ... """).
+// Returns the token ID (QuotedString or MultilineString), the raw bytes, and an error.
+func (s *Scanner) readQuotedString() (TokenID, []byte, error) {
+	s.pushMark()
+	defer s.popMark()
+
+	var (
+		c   rune
+		err error
+	)
+
+	// Consume the opening quote
+	if c, err = s.get(); err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+		return Unknown, nil, err
+	}
+	if c != '"' {
+		return Unknown, nil, fmt.Errorf("unexpected character %c", c)
+	}
+
+	// Check for triple-quote (""") by peeking at next two chars
+	c2, err2 := s.peek()
+	if err2 == nil && c2 == '"' {
+		// Peek at the char after the second quote
+		_, c3, err3 := s.peekTwo()
+		if err3 == nil && c3 == '"' {
+			// It's a triple-quoted multiline string: """
+			s.skip() // consume second "
+			s.skip() // consume third "
+
+			// Read the multiline string content until closing """
+			// Escape sequences are still processed (by the parser), but we
+			// return the raw bytes including the triple-quote delimiters.
+			escaped := false
+			consecutiveQuotes := 0
+			for {
+				if c, err = s.get(); err != nil {
+					if err == io.EOF {
+						err = io.ErrUnexpectedEOF
+					}
+					return Unknown, nil, err
+				}
+				if escaped {
+					escaped = false
+					consecutiveQuotes = 0
+					continue
+				}
+				if c == '\\' {
+					escaped = true
+					consecutiveQuotes = 0
+					continue
+				}
+				if c == '"' {
+					consecutiveQuotes++
+					if consecutiveQuotes >= 3 {
+						return MultilineString, s.copyFromMark(), nil
+					}
+				} else {
+					consecutiveQuotes = 0
+				}
+			}
+		}
+		// Second char is " but third is not " -> this is an empty string ""
+		// Fall through: the second " will be consumed by the regular logic below
+	}
+
+	// Regular single-line quoted string: read until unescaped closing "
+	// KDLv2: literal (unescaped) newlines are NOT allowed in single-line strings.
+	// However, \<whitespace> (whitespace escape) can span multiple lines.
+	escaped := false
+	for {
+		if c, err = s.get(); err != nil {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return Unknown, nil, err
+		}
+		if escaped {
+			if isNewline(c) || isWhiteSpace(c) {
+				// Whitespace escape: \<ws> consumes all following whitespace including newlines.
+				// Keep consuming whitespace/newlines until we find a non-whitespace character.
+				for {
+					nc, nerr := s.peek()
+					if nerr != nil {
+						break
+					}
+					if isNewline(nc) || isWhiteSpace(nc) {
+						s.skip()
+					} else {
+						break
+					}
+				}
+			}
+			escaped = false
+			continue
+		}
+		if c == '\\' {
+			escaped = true
+			continue
+		}
+		if c == '"' {
+			return QuotedString, s.copyFromMark(), nil
+		}
+		if isNewline(c) {
+			return Unknown, nil, fmt.Errorf("literal newlines are not allowed in single-line strings; use a multiline string (triple-quoted) instead")
+		}
+	}
 }
 
 func (s *Scanner) readSingleQuotedString() ([]byte, error) {
@@ -234,8 +393,9 @@ func (s *Scanner) readQuotedStringQ(q rune) ([]byte, error) {
 
 }
 
-// readBareIdentifier reads a bare identifier from the current position and returns a TokenID representing its type
-// (either BareIdentifier, Boolean, or Null), the byte sequence for the identifier, and a non-nil error on failure
+// readBareIdentifier reads a bare identifier from the current position and returns a TokenID representing its type.
+// In KDLv2, `true`, `false`, `null` are just bare identifiers (string values), not special tokens.
+// The keywords #true, #false, #null, #inf, #-inf, #nan are handled separately in scanner.go.
 func (s *Scanner) readBareIdentifier() (TokenID, []byte, error) {
 	var (
 		c   rune
@@ -252,18 +412,23 @@ func (s *Scanner) readBareIdentifier() (TokenID, []byte, error) {
 
 	switch c {
 	case '+', '-':
-		if _, c, err = s.peekTwo(); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return Unknown, nil, err
+		_, c2, err2 := s.peekTwo()
+		if err2 != nil {
+			// Only one character (+ or - at EOF) - valid bare identifier
+			break
 		}
-		if isDigit(c) {
-			return Unknown, nil, fmt.Errorf("unexpected character %c", c)
+		if isDigit(c2) {
+			return Unknown, nil, fmt.Errorf("unexpected character %c", c2)
 		}
 	default:
 		if !isBareIdentifierStartChar(c, s.RelaxedNonCompliant) {
 			return Unknown, nil, fmt.Errorf("unexpected character %c", c)
+		}
+		// In KDLv2, '.' followed by digit at start is invalid (e.g. .1)
+		if c == '.' {
+			if _, c2, err2 := s.peekTwo(); err2 == nil && isDigit(c2) {
+				return Unknown, nil, fmt.Errorf("unexpected character %c", c2)
+			}
 		}
 	}
 
@@ -276,19 +441,23 @@ func (s *Scanner) readBareIdentifier() (TokenID, []byte, error) {
 	if literal, err = s.readWhile(isBareIdentifierCharClosure, 1); err != nil {
 		return Unknown, nil, err
 	}
-	tokenType := BareIdentifier
 
-	if string(literal) == "true" || string(literal) == "false" {
-		tokenType = Boolean
-	} else if string(literal) == "null" {
-		tokenType = Null
+	// In KDLv2, these words are reserved and cannot be used as bare identifiers.
+	// They must be quoted (e.g., "true") to use as string values, or prefixed with #
+	// (e.g., #true) for their keyword meaning.
+	if !s.RelaxedNonCompliant.Permit(relaxed.NGINXSyntax) {
+		switch string(literal) {
+		case "true", "false", "null", "inf", "-inf", "nan":
+			return Unknown, nil, fmt.Errorf("reserved keyword %q cannot be used as a bare identifier", string(literal))
+		}
 	}
 
-	return tokenType, literal, nil
+	return BareIdentifier, literal, nil
 }
 
 // readIdentifier reads an identifier from the current position and returns a TokenID representing the identifier's
-// type, a byte sequence representeing the identifier, and a non-nil error on failure
+// type, a byte sequence representing the identifier, and a non-nil error on failure.
+// In KDLv2, raw strings (r"...") are no longer valid - they use #"..."# syntax handled in scanner.go.
 func (s *Scanner) readIdentifier() (TokenID, []byte, error) {
 	c, err := s.peek()
 	if err != nil {
@@ -299,33 +468,17 @@ func (s *Scanner) readIdentifier() (TokenID, []byte, error) {
 		return Unknown, nil, fmt.Errorf("unexpected character %c", c)
 	}
 
-	// r.log("reading an identifier", "start-with", string(c), "second-char", string(c2))
 	switch c {
-	case 'r':
-		// r.log("maybe a raw string", "second-char", string(c2))
-		_, c2, err := s.peekTwo()
-		if err == nil && (c2 == '#' || c2 == '"') {
-			// r.log("fo sho a raw string, reading")
-			literal, err := s.readRawString()
-			return RawString, literal, err
-		} else {
-			// r.log("must be a bare identifier")
-			// possible bare identifier starting with 'r'
-			tokenType, literal, err := s.readBareIdentifier()
-			return tokenType, literal, err
-		}
-
 	case '"':
 		s.log("quoted string, reading")
-		literal, err := s.readQuotedString()
-		return QuotedString, literal, err
+		tokenID, literal, err := s.readQuotedString()
+		return tokenID, literal, err
 
-	case '{', '}', '<', '>', ';', '[', ']', '=', ',':
+	case '{', '}', '#', ';', '[', ']', '=':
 		return Unknown, nil, fmt.Errorf("unexpected character %c", c)
 
-	case '\\', '(', ')', '.', '_', '?', '/':
+	case '\\', '(', ')', '/':
 		if !s.RelaxedNonCompliant.Permit(relaxed.NGINXSyntax) {
-			// some of these arent actually forbidden by the spec, but the test cases indicate that they should be disallowed
 			return Unknown, nil, fmt.Errorf("unexpected character %c", c)
 		}
 
@@ -345,6 +498,17 @@ func (s *Scanner) readIdentifier() (TokenID, []byte, error) {
 
 	s.log("bare identifier, reading")
 	tokenType, literal, err := s.readBareIdentifier()
+	if err != nil {
+		return tokenType, literal, err
+	}
+
+	// KDLv2: reject legacy raw string syntax r"..." and r#"..."#
+	if !s.RelaxedNonCompliant.Permit(relaxed.NGINXSyntax) && string(literal) == "r" {
+		if nc, nerr := s.peek(); nerr == nil && (nc == '"' || nc == '#') {
+			return Unknown, nil, fmt.Errorf("legacy raw string syntax r\"...\" is not valid in KDLv2; use #\"...\"# instead")
+		}
+	}
+
 	return tokenType, literal, err
 }
 

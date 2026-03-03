@@ -12,6 +12,7 @@ const (
 	stateNodeParams
 	stateNodeEnd
 	stateArgProp
+	stateArgPropPostWS
 	stateProperty
 	statePropertyValue
 	stateChildren
@@ -31,6 +32,8 @@ func (p parserState) String() string {
 		return "stateNodeEnd"
 	case stateArgProp:
 		return "stateArgProp"
+	case stateArgPropPostWS:
+		return "stateArgPropPostWS"
 	case stateProperty:
 		return "stateProperty"
 	case statePropertyValue:

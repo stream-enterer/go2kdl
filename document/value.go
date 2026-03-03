@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/sblinch/kdl-go/internal/tokenizer"
+	"github.com/ar-go/go2kdl/internal/tokenizer"
 )
 
 // ValueFlag represents flags for a Value
@@ -17,7 +17,7 @@ type ValueFlag uint8
 const (
 	// FlagNone indicates no flag is set
 	FlagNone ValueFlag = iota
-	// FlagRaw specifies that this Value should be output in RawString notation (r"foo\n")
+	// FlagRaw specifies that this Value should be output in RawString notation (#"foo\n"#)
 	FlagRaw
 	// FlagQuoted specifies that this Value should be output in FormattedString notation ("foo\\n")
 	FlagQuoted
@@ -39,6 +39,9 @@ type Value struct {
 	Value interface{}
 	// Flag is any flag assigned for use in output
 	Flag ValueFlag
+	// HasDecimal indicates whether the original source representation included a decimal point.
+	// This is used to preserve formatting for float values in E notation (e.g., 1.0E+10 vs 1E+10).
+	HasDecimal bool
 }
 
 // valueOpts specify options for rendering Values as strings
@@ -71,7 +74,7 @@ func (v *Value) value(b []byte, opts valueOpts) []byte {
 		return (opts & opt) != 0
 	}
 	if v.Value == nil {
-		return append(b, "null"...)
+		return append(b, "#null"...)
 	}
 
 	base := 10
@@ -154,29 +157,50 @@ func (v *Value) value(b []byte, opts valueOpts) []byte {
 		}
 		b = strconv.AppendInt(b, x, base)
 	case float32:
-		l10 := math.Log10(math.Abs(float64(x)))
-		if !math.IsInf(l10, 0) && (l10 > 9 || l10 < -9) {
-			b = strconv.AppendFloat(b, float64(x), 'E', -1, 32)
+		f64 := float64(x)
+		if math.IsNaN(f64) {
+			b = append(b, "#nan"...)
+		} else if math.IsInf(f64, 1) {
+			b = append(b, "#inf"...)
+		} else if math.IsInf(f64, -1) {
+			b = append(b, "#-inf"...)
 		} else {
-			// make sure floats in decimal notation always include a decimal point
-			b = strconv.AppendFloat(b, float64(x), 'f', -1, 32)
-			if _, frac := math.Modf(float64(x)); frac == 0.0 {
-				b = append(b, '.', '0')
+			l10 := math.Log10(math.Abs(f64))
+			if !math.IsInf(l10, 0) && (l10 > 9 || l10 < -9) {
+				b = strconv.AppendFloat(b, f64, 'E', -1, 32)
+			} else {
+				// make sure floats in decimal notation always include a decimal point
+				b = strconv.AppendFloat(b, f64, 'f', -1, 32)
+				if _, frac := math.Modf(f64); frac == 0.0 {
+					b = append(b, '.', '0')
+				}
 			}
 		}
 	case float64:
-		l10 := math.Log10(math.Abs(x))
-		if !math.IsInf(l10, 0) && (l10 > 9 || l10 < -9) {
-			b = strconv.AppendFloat(b, x, 'E', -1, 64)
+		if math.IsNaN(x) {
+			b = append(b, "#nan"...)
+		} else if math.IsInf(x, 1) {
+			b = append(b, "#inf"...)
+		} else if math.IsInf(x, -1) {
+			b = append(b, "#-inf"...)
 		} else {
-			// make sure floats in decimal notation always include a decimal point
-			b = strconv.AppendFloat(b, x, 'f', -1, 64)
-			if _, frac := math.Modf(float64(x)); frac == 0.0 {
-				b = append(b, '.', '0')
+			l10 := math.Log10(math.Abs(x))
+			if !math.IsInf(l10, 0) && (l10 > 9 || l10 < -9) {
+				b = strconv.AppendFloat(b, x, 'E', -1, 64)
+			} else {
+				// make sure floats in decimal notation always include a decimal point
+				b = strconv.AppendFloat(b, x, 'f', -1, 64)
+				if _, frac := math.Modf(float64(x)); frac == 0.0 {
+					b = append(b, '.', '0')
+				}
 			}
 		}
 	case bool:
-		b = strconv.AppendBool(b, x)
+		if x {
+			b = append(b, "#true"...)
+		} else {
+			b = append(b, "#false"...)
+		}
 	case string:
 
 		isBare := tokenizer.IsBareIdentifier(x, 0)
@@ -369,12 +393,16 @@ func parseQuotedString(b []byte) (string, error) {
 	return v, err
 }
 
-// parseRawString parses a KDL RawString from b and returns the unquoted string, or a non-nil error on failure
+// parseRawString parses a KDLv2 RawString from b and returns the unquoted string, or a non-nil error on failure.
+// KDLv2 raw strings use the syntax #"..."# (with N hashes on each side).
 func parseRawString(b []byte) (string, error) {
 	// the tokenizer has already validated the string format, so we can safely just use byte offsets
+	// Format: ###"content"### where the number of # is the same on both sides
 	p := bytes.IndexByte(b, '"')
-	b = b[p+1:]
-	b = b[0 : len(b)-p]
+	// p is the index of the first ", which equals the number of leading hashes
+	// Opening delimiter is p+1 bytes (hashes + quote)
+	// Closing delimiter is p+1 bytes (quote + hashes)
+	b = b[p+1 : len(b)-(p+1)]
 	return string(b), nil
 }
 
@@ -396,6 +424,9 @@ func ValueFromToken(t tokenizer.Token) (*Value, error) {
 		v.Flag = FlagRaw
 	case tokenizer.Decimal:
 		v.Value, err = parseNumber(t.Data, 10)
+		if bytes.IndexByte(t.Data, '.') != -1 {
+			v.HasDecimal = true
+		}
 	case tokenizer.SuffixedDecimal:
 		v.Value, err = ParseSuffixedDecimal(t.Data)
 	case tokenizer.Octal:
@@ -404,8 +435,25 @@ func ValueFromToken(t tokenizer.Token) (*Value, error) {
 	case tokenizer.Hexadecimal:
 		v.Value, err = parseNumber(t.Data, 16)
 		v.Flag = FlagHexadecimal
+	case tokenizer.MultilineString:
+		v.Value, err = parseMultilineString(t.Data)
+		v.Flag = FlagQuoted
+	case tokenizer.MultilineRawString:
+		v.Value, err = parseMultilineRawString(t.Data)
+		v.Flag = FlagRaw
+	case tokenizer.FloatKeyword:
+		kw := string(t.Data)
+		switch kw {
+		case "#inf":
+			v.Value = math.Inf(1)
+		case "#-inf":
+			v.Value = math.Inf(-1)
+		case "#nan":
+			v.Value = math.NaN()
+		}
 	case tokenizer.Boolean:
-		v.Value = t.Data[0] == 't'
+		// KDLv2: #true / #false
+		v.Value = string(t.Data) == "#true"
 	case tokenizer.Null:
 		v.Value = nil
 	}

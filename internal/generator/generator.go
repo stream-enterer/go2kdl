@@ -3,7 +3,7 @@ package generator
 import (
 	"io"
 
-	"github.com/sblinch/kdl-go/document"
+	"github.com/ar-go/go2kdl/document"
 )
 
 type Options struct {

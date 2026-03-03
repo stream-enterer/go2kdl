@@ -7,7 +7,9 @@
 package document
 
 import (
-	"github.com/sblinch/kdl-go/internal/tokenizer"
+	"sort"
+
+	"github.com/ar-go/go2kdl/internal/tokenizer"
 )
 
 // Properties represents a list of properties for a Node
@@ -50,10 +52,21 @@ func (p Properties) Exist() bool {
 	return len(p) > 0
 }
 
+// sortedKeys returns the keys of the property map in sorted order for deterministic output
+func (p Properties) sortedKeys() []string {
+	keys := make([]string, 0, len(p))
+	for k := range p {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 // String returns the KDL representation of the property list, formatting numbers per their flags
 func (p Properties) String() string {
 	b := make([]byte, 0, len(p)*(1+8+1+8))
-	for k, v := range p {
+	for _, k := range p.sortedKeys() {
+		v := p[k]
 		b = append(b, ' ')
 		if len(k) > 0 && tokenizer.IsBareIdentifier(k, 0) {
 			b = append(b, k...)
@@ -70,7 +83,8 @@ func (p Properties) String() string {
 // UnformattedString returns the KDL representation of the property list, formatting numbers in decimal
 func (p Properties) UnformattedString() string {
 	b := make([]byte, 0, len(p)*(1+8+1+8))
-	for k, v := range p {
+	for _, k := range p.sortedKeys() {
+		v := p[k]
 		b = append(b, ' ')
 		if len(k) > 0 && tokenizer.IsBareIdentifier(k, 0) {
 			b = append(b, k...)
@@ -92,7 +106,8 @@ func (p Properties) AppendTo(b []byte) []byte {
 		r = append(r, b...)
 		b = r
 	}
-	for k, v := range p {
+	for _, k := range p.sortedKeys() {
+		v := p[k]
 		b = append(b, ' ')
 		if len(k) > 0 && tokenizer.IsBareIdentifier(k, 0) {
 			b = append(b, k...)

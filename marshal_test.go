@@ -13,25 +13,25 @@ var (
 	kdlOutputSingleArg = `
 name "Bob"
 age 76
-active true
+active #true
 temperature 98.6
 secret 42
-divides-by null
+divides-by #null
 `
 
 	kdlOutputSingleArgMap = `
-active true
+active #true
 age 76
-divides-by null
+divides-by #null
 name "Bob"
 secret 42
 temperature 98.6
 `
 
 	kdlOutputSingleArgIntf = `
-active true
+active #true
 age 76
-divides-by null
+divides-by #null
 name "Bob"
 secret 42
 temperature 98.6
@@ -40,19 +40,19 @@ temperature 98.6
 	kdlOutputSingleArgPtr = `
 name "Bob"
 age 76
-active true
+active #true
 temperature 98.6
 secret 42
-divides-by null
+divides-by #null
 `
 
 	kdlOutputSingleArgEmbed = `
 age 76
-active true
+active #true
 temperature 98.6
 name "Bob"
 secret 42
-divides-by null
+divides-by #null
 `
 
 	kdlOutputMultipleArgs = `
@@ -85,45 +85,45 @@ crazy-man "Stu" "Jones" age=52
 
 	kdlOutputChildren = `
 bob age=27 nationality="Canadian" {
-	language English=true French=false
+	language English=#true French=#false
 }
 klaus {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
 	kdlOutputArgsChildren = `
 bob "Johnson" age=27 nationality="Canadian" {
-	language English=true French=false
+	language English=#true French=#false
 }
 klaus "Werner" {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
 	kdlOutputArgsChildrenField = `
 bob "Johnson" age=27 nationality="Canadian" {
-	language English=true French=false
+	language English=#true French=#false
 }
 klaus "Werner" {
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 	nationality "German"
 }
 `
 
 	kdlOutputArgsPropsChildren = `
-bob "Johnson" active=true age=27 nationality="Canadian" {
-	language English=true French=false
+bob "Johnson" active=#true age=27 nationality="Canadian" {
+	language English=#true French=#false
 }
-klaus "Werner" active=false {
+klaus "Werner" active=#false {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -131,12 +131,12 @@ klaus "Werner" active=false {
 person {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 person {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -144,12 +144,12 @@ person {
 person "Bob" {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 person "Klaus" {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -157,52 +157,52 @@ person "Klaus" {
 person "Johnson" "Bob" {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 person "Johnson" "Jim" {
 	nationality "Canadian"
 	age 35
-	language English=true French=false
+	language English=#true French=#false
 }
 person "Werner" "Klaus" {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }`
 
 	kdlOutputArgsPropsTwoDimMultiChildrenMap = `
-person "Johnson" "Bob" "leprechaun" active=true {
+person "Johnson" "Bob" "leprechaun" active=#true {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
-person "Johnson" "Jim" "chupacabra" active=true {
+person "Johnson" "Jim" "chupacabra" active=#true {
 	nationality "Canadian"
 	age 35
-	language English=true French=false
+	language English=#true French=#false
 }
-person "Werner" "Klaus" "sasquatch" active=false {
+person "Werner" "Klaus" "sasquatch" active=#false {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
 	kdlOutputArgsPropsTwoDimMultiChildrenPtrMap = `
-person "Johnson" "Bob" "leprechaun" active=true {
+person "Johnson" "Bob" "leprechaun" active=#true {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
-person "Johnson" "Jim" "chupacabra" active=true {
+person "Johnson" "Jim" "chupacabra" active=#true {
 	nationality "Canadian"
 	age 35
-	language English=true French=false
+	language English=#true French=#false
 }
-person "Werner" "Klaus" "sasquatch" active=false {
+person "Werner" "Klaus" "sasquatch" active=#false {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -216,8 +216,8 @@ mother "\"Jane\""
 `
 
 	kdlOutputMarshalKDLNode = `
-father "BOB" "JOHNSON" age=32 active=true
-mother "JANE" "JOHNSON" age=28 active=true
+father "BOB" "JOHNSON" active=#true age=32
+mother "JANE" "JOHNSON" active=#true age=28
 `
 
 	kdlOutputMarshalTextValue = `
@@ -435,7 +435,7 @@ func TestBug9(t *testing.T) {
 	data := `
 Name "Bob"
 Age 76
-Active true
+Active #true
 `
 
 	want := Person{Name: "Bob", Age: 76, Active: true}

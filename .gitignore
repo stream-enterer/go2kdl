@@ -1,3 +1,20 @@
 .idea
 kdl-org
+*.pprof
+.claude/
+.vscode/
+.bash_profile
+.bashrc
+.zshrc
+.zprofile
+.profile
+.gitconfig
+.ripgreprc
+.mcp.json
+.gitmodules
+HEAD
+objects/
+refs/
+hooks/
+config
 

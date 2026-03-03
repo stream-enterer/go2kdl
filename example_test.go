@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sblinch/kdl-go/document"
-	"github.com/sblinch/kdl-go/relaxed"
+	"github.com/ar-go/go2kdl/document"
+	"github.com/ar-go/go2kdl/relaxed"
 )
 
 func TestParse(t *testing.T) {
 	data := `
 name "Bob"
 age 76
-active true
+active #true
 `
 
 	doc, err := Parse(strings.NewReader(data))
@@ -33,7 +33,7 @@ func TestGenerate(t *testing.T) {
 	data := `
 name "Bob"
 age 76
-active true
+active #true
 `
 
 	doc, err := Parse(strings.NewReader(data))
@@ -54,7 +54,7 @@ func TestExampleUnmarshal1(t *testing.T) {
 	data := `
     name "Bob"
     age 76
-    active true
+    active #true
 `
 
 	var person Person
@@ -189,12 +189,12 @@ func TestExampleUnmarshal5(t *testing.T) {
 	data := `
     bob {
         nationality "Canadian"
-        language English=true French=false
+        language English=#true French=#false
     }
-    
+
     klaus {
         nationality "German"
-        language English=false German=true
+        language English=#false German=#true
     }
 `
 
@@ -215,9 +215,9 @@ func TestExampleUnmarshal5(t *testing.T) {
 
 func TestExampleUnmarshal6(t *testing.T) {
 	data := `
-bob "Johnson" active=true {
+bob "Johnson" active=#true {
 	nationality "Canadian"
-	language English=true French=false
+	language English=#true French=#false
 }
 `
 
@@ -233,9 +233,9 @@ bob "Johnson" active=true {
 
 func TestExampleUnmarshal7(t *testing.T) {
 	data := `
-bob "Johnson" active=true {
+bob "Johnson" active=#true {
 	nationality "Canadian"
-	language English=true French=false
+	language English=#true French=#false
 }
 `
 
@@ -258,9 +258,9 @@ bob "Johnson" active=true {
 
 func TestExampleUnmarshal8(t *testing.T) {
 	data := `
-bob "Johnson" active=true {
+bob "Johnson" active=#true {
 	nationality "Canadian"
-	language English=true French=false
+	language English=#true French=#false
 }
 `
 
@@ -306,8 +306,8 @@ func TestExampleUnmarshal9(t *testing.T) {
 
 func TestExampleUnmarshal10(t *testing.T) {
 	data := `
-person "Bob" active=true
-person "Jane" active=true
+person "Bob" active=#true
+person "Jane" active=#true
 `
 	type People struct {
 		Person []map[string]interface{} `kdl:"person,multiple"`
@@ -359,7 +359,7 @@ func TestExampleUnmarshal12(t *testing.T) {
 	data := `
     name "Bob"
     age 76
-    active true
+    active #true
 `
 
 	var person Person
@@ -555,7 +555,7 @@ func TestExampleMarshal1(t *testing.T) {
 		fmt.Println(string(data))
 		// name "Bob Jones"
 		// age 32
-		// active true
+		// active #true
 	}
 }
 
@@ -576,7 +576,7 @@ func TestExampleMarshal2(t *testing.T) {
 	_ = enc.Encode(person)
 	// name "Bob Jones"
 	// age 32
-	// active true
+	// active #true
 }
 
 func TestExampleMarshal3(t *testing.T) {
@@ -707,7 +707,7 @@ func TestExampleMarshal8(t *testing.T) {
 	if data, err := Marshal(people); err == nil {
 		fmt.Println(string(data))
 		// bob nationality=Canadian {
-		// 	language French=false English=true
+		// 	language French=#false English=#true
 		// }
 
 	}
@@ -730,7 +730,7 @@ func TestExampleMarshal9(t *testing.T) {
 	if data, err := Marshal(people); err == nil {
 		fmt.Println(string(data))
 		// bob nationality=Canadian {
-		// 	language English=true French=false
+		// 	language English=#true French=#false
 		// }
 	}
 }
@@ -754,8 +754,8 @@ func TestExampleMarshal10(t *testing.T) {
 
 	if data, err := Marshal(people); err == nil {
 		fmt.Println(string(data))
-		// bob "Johnson" nationality=Canadian active=true {
-		// 	language English=true French=false
+		// bob "Johnson" nationality=Canadian active=#true {
+		// 	language English=#true French=#false
 		// }
 	}
 }
@@ -786,8 +786,8 @@ func TestExampleMarshal11(t *testing.T) {
 
 	if data, err := Marshal(people); err == nil {
 		fmt.Println(string(data))
-		// bob "Johnson" active=true {
-		// 	language English=true French=false
+		// bob "Johnson" active=#true {
+		// 	language English=#true French=#false
 		// 	nationality "Canadian"
 		// }
 	}
@@ -863,8 +863,8 @@ func TestExampleMarshal14(t *testing.T) {
 
 	if data, err := Marshal(people); err == nil {
 		fmt.Println(string(data))
-		// person "Bob" active=true
-		// person "Jane" active=true
+		// person "Bob" active=#true
+		// person "Jane" active=#true
 	}
 }
 
@@ -1022,7 +1022,7 @@ func TestExampleMarshal20(t *testing.T) {
 	}
 	if data, err := Marshal(p); err == nil {
 		fmt.Println(string(data))
-		// father "Bob" "Johnson" age=32 parent=true
+		// father "Bob" "Johnson" age=32 parent=#true
 	}
 
 }

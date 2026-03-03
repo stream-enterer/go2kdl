@@ -24,6 +24,9 @@ const (
 	SuffixedDecimal
 	RawString
 	QuotedString
+	MultilineString
+	MultilineRawString
+	FloatKeyword
 	BraceOpen
 	BraceClose
 	ParensOpen
@@ -45,30 +48,33 @@ const (
 )
 
 var tokenClasses = map[TokenID][]TokenID{
-	Newline:           {ClassTerminator, ClassWhitespace, ClassEndOfLine},
-	Whitespace:        {ClassWhitespace},
-	MultiLineComment:  {ClassComment},
-	SingleLineComment: {ClassComment},
-	TokenComment:      {},
-	TypeSpec:          {},
-	Decimal:           {ClassNumber, ClassValue, ClassNonStringValue},
-	Hexadecimal:       {ClassNumber, ClassValue, ClassNonStringValue},
-	Octal:             {ClassNumber, ClassValue, ClassNonStringValue},
-	Binary:            {ClassNumber, ClassValue, ClassNonStringValue},
-	SuffixedDecimal:   {ClassNumber, ClassValue, ClassNonStringValue},
-	Boolean:           {ClassValue, ClassNonStringValue},
-	Null:              {ClassValue, ClassNonStringValue},
-	BareIdentifier:    {ClassValue, ClassIdentifier},
-	RawString:         {ClassValue, ClassString, ClassIdentifier},
-	QuotedString:      {ClassValue, ClassString, ClassIdentifier},
-	BraceOpen:         {},
-	BraceClose:        {},
-	ParensOpen:        {},
-	ParensClose:       {},
-	Equals:            {},
-	Semicolon:         {ClassTerminator},
-	Continuation:      {},
-	EOF:               {ClassTerminator, ClassEndOfLine},
+	Newline:            {ClassTerminator, ClassWhitespace, ClassEndOfLine},
+	Whitespace:         {ClassWhitespace},
+	MultiLineComment:   {ClassComment},
+	SingleLineComment:  {ClassComment},
+	TokenComment:       {},
+	TypeSpec:           {},
+	Decimal:            {ClassNumber, ClassValue, ClassNonStringValue},
+	Hexadecimal:        {ClassNumber, ClassValue, ClassNonStringValue},
+	Octal:              {ClassNumber, ClassValue, ClassNonStringValue},
+	Binary:             {ClassNumber, ClassValue, ClassNonStringValue},
+	SuffixedDecimal:    {ClassNumber, ClassValue, ClassNonStringValue},
+	Boolean:            {ClassValue, ClassNonStringValue},
+	Null:               {ClassValue, ClassNonStringValue},
+	FloatKeyword:       {ClassValue, ClassNonStringValue},
+	BareIdentifier:     {ClassValue, ClassIdentifier},
+	RawString:          {ClassValue, ClassString, ClassIdentifier},
+	QuotedString:       {ClassValue, ClassString, ClassIdentifier},
+	MultilineString:    {ClassValue, ClassString, ClassIdentifier},
+	MultilineRawString: {ClassValue, ClassString, ClassIdentifier},
+	BraceOpen:          {},
+	BraceClose:         {},
+	ParensOpen:         {},
+	ParensClose:        {},
+	Equals:             {},
+	Semicolon:          {ClassTerminator},
+	Continuation:       {},
+	EOF:                {ClassTerminator, ClassEndOfLine},
 }
 
 func (t TokenID) Classes() []TokenID {
@@ -109,6 +115,12 @@ func (t TokenID) String() string {
 		return "RawString"
 	case QuotedString:
 		return "FormattedString"
+	case MultilineString:
+		return "MultilineString"
+	case MultilineRawString:
+		return "MultilineRawString"
+	case FloatKeyword:
+		return "FloatKeyword"
 	case BraceOpen:
 		return "BraceOpen"
 	case BraceClose:

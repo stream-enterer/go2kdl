@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sblinch/kdl-go/document"
-	"github.com/sblinch/kdl-go/internal/coerce"
-	"github.com/sblinch/kdl-go/internal/tokenizer"
+	"github.com/ar-go/go2kdl/document"
+	"github.com/ar-go/go2kdl/internal/coerce"
+	"github.com/ar-go/go2kdl/internal/tokenizer"
 )
 
 type marshaler interface {

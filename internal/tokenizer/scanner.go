@@ -9,7 +9,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/sblinch/kdl-go/relaxed"
+	"github.com/ar-go/go2kdl/relaxed"
 )
 
 var (
@@ -42,6 +42,7 @@ type Scanner struct {
 	RelaxedNonCompliant relaxed.Flags
 	ParseComments       bool
 	r                   io.Reader
+	bomChecked          bool // tracks whether we've checked for BOM at document start
 }
 
 // log records a log message if a logger has been configured
@@ -334,6 +335,167 @@ func ScanOne(b []byte) (Token, error) {
 	return staticScan.s.readNext()
 }
 
+// readHashToken reads a token that starts with '#'. In KDLv2, this handles:
+//   - #true, #false -> Boolean token
+//   - #null -> Null token
+//   - #inf, #-inf, #nan -> FloatKeyword token
+//   - #"..."# -> RawString token
+//   - #"""..."""# -> MultilineRawString token
+//   - ##"..."## etc. -> RawString with multiple hashes
+func (s *Scanner) readHashToken() (Token, error) {
+	token := Token{
+		Line:   s.line,
+		Column: s.column,
+	}
+
+	// Count the number of leading '#' characters by consuming them and looking ahead
+	s.pushMark()
+	defer s.popMark()
+
+	hashCount := 0
+	for {
+		c, err := s.peek()
+		if err != nil {
+			if err == io.EOF {
+				return token, fmt.Errorf("unexpected end of input after #")
+			}
+			return token, err
+		}
+		if c == '#' {
+			s.skip()
+			hashCount++
+		} else {
+			break
+		}
+	}
+
+	// After consuming all '#'s, look at the next character
+	c, err := s.peek()
+	if err != nil {
+		if err == io.EOF {
+			return token, fmt.Errorf("unexpected end of input after #")
+		}
+		return token, err
+	}
+
+	// If followed by '"', this is a raw string
+	if c == '"' {
+		// We consumed hashCount '#'s and peeked at '"' but did not consume it.
+		// Now consume the opening quote(s).
+		s.skip() // consume the opening "
+
+		// Check for triple-quote
+		isMultiline := false
+		if c2, err2 := s.peek(); err2 == nil && c2 == '"' {
+			if _, c3, err3 := s.peekTwo(); err3 == nil && c3 == '"' {
+				s.skip() // second "
+				s.skip() // third "
+				isMultiline = true
+			}
+		}
+
+		if isMultiline {
+			token.ID = MultilineRawString
+			// Read until closing """ followed by hashCount #'s
+			consecutiveQuotes := 0
+			for {
+				ch, err := s.get()
+				if err != nil {
+					if err == io.EOF {
+						err = io.ErrUnexpectedEOF
+					}
+					return token, err
+				}
+				if ch == '"' {
+					consecutiveQuotes++
+					if consecutiveQuotes >= 3 {
+						// Check if followed by the right number of hashes
+						matched := 0
+						for matched < hashCount {
+							if nc, nerr := s.peek(); nerr == nil && nc == '#' {
+								s.skip()
+								matched++
+							} else {
+								break
+							}
+						}
+						if matched == hashCount {
+							token.Data = s.copyFromMark()
+							return token, nil
+						}
+						consecutiveQuotes = 0
+					}
+				} else {
+					consecutiveQuotes = 0
+				}
+			}
+		} else {
+			token.ID = RawString
+			// Read until closing " followed by hashCount #'s
+			// KDLv2: literal newlines are NOT allowed in single-line raw strings
+			for {
+				ch, err := s.get()
+				if err != nil {
+					if err == io.EOF {
+						err = io.ErrUnexpectedEOF
+					}
+					return token, err
+				}
+				if ch == '"' {
+					matched := 0
+					for matched < hashCount {
+						if nc, nerr := s.peek(); nerr == nil && nc == '#' {
+							s.skip()
+							matched++
+						} else {
+							break
+						}
+					}
+					if matched == hashCount {
+						token.Data = s.copyFromMark()
+						return token, nil
+					}
+				}
+				if isNewline(ch) {
+					return token, fmt.Errorf("literal newlines are not allowed in single-line raw strings; use a multiline raw string (triple-quoted) instead")
+				}
+			}
+		}
+	}
+
+	// Not a raw string - must be a keyword. We consumed hashCount '#'s.
+	// Only valid with exactly one '#'.
+	if hashCount != 1 {
+		return token, fmt.Errorf("unexpected character #")
+	}
+
+	// Read the keyword identifier that follows '#'
+	// We need to match specific keywords: true, false, null, inf, nan, -inf
+	keyword, err := s.readWhile(func(c rune) bool {
+		return (c >= 'a' && c <= 'z') || c == '-'
+	}, 1)
+	if err != nil {
+		return token, fmt.Errorf("unexpected character after #")
+	}
+
+	kw := string(keyword)
+	switch kw {
+	case "true", "false":
+		token.ID = Boolean
+		token.Data = s.copyFromMark()
+	case "null":
+		token.ID = Null
+		token.Data = s.copyFromMark()
+	case "inf", "-inf", "nan":
+		token.ID = FloatKeyword
+		token.Data = s.copyFromMark()
+	default:
+		return token, fmt.Errorf("unknown keyword #%s", kw)
+	}
+
+	return token, nil
+}
+
 // readNext reads and returns the next token from the input buffer, or a non-nil error on failure
 func (s *Scanner) readNext() (Token, error) {
 	token := Token{
@@ -345,6 +507,25 @@ func (s *Scanner) readNext() (Token, error) {
 	if err != nil {
 		return token, err
 	}
+
+	// Handle BOM: only allowed at byte offset 0 (document start)
+	if c == '\uFEFF' {
+		offset := len(s.raw) - len(s.input)
+		if offset == 0 && !s.bomChecked {
+			// BOM at document start: skip it silently as whitespace
+			s.bomChecked = true
+			token.ID = Whitespace
+			token.Data = s.copyInput(size)
+			s.skip()
+			if s.Logger != nil {
+				s.log("got token", "token", token)
+			}
+			return token, nil
+		}
+		// BOM not at document start is an error in KDLv2
+		return token, fmt.Errorf("unexpected BOM (U+FEFF) at non-start position")
+	}
+	s.bomChecked = true
 
 	ignore := true
 
@@ -367,9 +548,7 @@ func (s *Scanner) readNext() (Token, error) {
 		'\u200A',
 		'\u202F',
 		'\u205F',
-		'\u3000',
-		// BOM
-		'\uFEFF':
+		'\u3000':
 		s.log("reading whitespace")
 		token.ID = Whitespace
 		token.Data = s.readWhitespace()
@@ -388,7 +567,7 @@ func (s *Scanner) readNext() (Token, error) {
 			s.skip()
 		}
 
-	case '\n', '\u0085', '\u000c', '\u2028', '\u2029':
+	case '\n', '\u000B', '\u0085', '\u000c', '\u2028', '\u2029':
 		s.log("reading newline")
 		token.ID = Newline
 		token.Data = s.copyInput(size)
@@ -399,7 +578,6 @@ func (s *Scanner) readNext() (Token, error) {
 		if err != nil {
 			return token, err
 		}
-		// s.log("reading potential comment", "c2", string(c))
 
 		switch c {
 		case '*':
@@ -431,6 +609,19 @@ func (s *Scanner) readNext() (Token, error) {
 			} else {
 				return token, fmt.Errorf("unexpected character %c", c)
 			}
+		}
+
+	case '#':
+		if s.RelaxedNonCompliant.Permit(relaxed.NGINXSyntax) {
+			s.log("reading single line comment (nginx-style)")
+			token.ID = SingleLineComment
+			token.Data, err = s.readSingleLineComment()
+			if err != nil {
+				return token, err
+			}
+		} else {
+			s.log("reading hash token")
+			return s.readHashToken()
 		}
 
 	case '(':
@@ -487,10 +678,11 @@ func (s *Scanner) readNext() (Token, error) {
 		s.log("reading signed value")
 		_, c, err := s.peekTwo()
 		if err != nil {
-			s.log("oh noes")
-			return token, err
-		}
-		if isDigit(c) {
+			// Only one character left (e.g., just "+" or "-" at EOF) - treat as bare identifier
+			if token.ID, token.Data, err = s.readIdentifier(); err != nil {
+				return token, err
+			}
+		} else if isDigit(c) {
 			if token.ID, token.Data, err = s.readDecimal(); err != nil {
 				s.log("decimal oh noes")
 				return token, err
@@ -539,14 +731,7 @@ func (s *Scanner) readNext() (Token, error) {
 		}
 
 	default:
-		if c == '#' && s.RelaxedNonCompliant.Permit(relaxed.NGINXSyntax) {
-			s.log("reading single line comment")
-			token.ID = SingleLineComment
-			token.Data, err = s.readSingleLineComment()
-			if err != nil {
-				return token, err
-			}
-		} else if c == ':' && s.RelaxedNonCompliant.Permit(relaxed.YAMLTOMLAssignments) {
+		if c == ':' && s.RelaxedNonCompliant.Permit(relaxed.YAMLTOMLAssignments) {
 			s.log("reading colon")
 			token.ID = Whitespace
 			token.Data = s.copyInput(1)

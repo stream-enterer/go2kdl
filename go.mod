@@ -1,3 +1,3 @@
-module github.com/sblinch/kdl-go
+module github.com/ar-go/go2kdl
 
-go 1.19
+go 1.21

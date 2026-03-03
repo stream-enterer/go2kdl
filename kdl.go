@@ -3,10 +3,10 @@ package kdl
 import (
 	"io"
 
-	"github.com/sblinch/kdl-go/document"
-	"github.com/sblinch/kdl-go/internal/generator"
-	"github.com/sblinch/kdl-go/internal/parser"
-	"github.com/sblinch/kdl-go/internal/tokenizer"
+	"github.com/ar-go/go2kdl/document"
+	"github.com/ar-go/go2kdl/internal/generator"
+	"github.com/ar-go/go2kdl/internal/parser"
+	"github.com/ar-go/go2kdl/internal/tokenizer"
 )
 
 func parse(s *tokenizer.Scanner) (*document.Document, error) {

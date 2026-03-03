@@ -4,9 +4,9 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/sblinch/kdl-go/document"
-	"github.com/sblinch/kdl-go/internal/marshaler"
-	"github.com/sblinch/kdl-go/internal/tokenizer"
+	"github.com/ar-go/go2kdl/document"
+	"github.com/ar-go/go2kdl/internal/marshaler"
+	"github.com/ar-go/go2kdl/internal/tokenizer"
 )
 
 type UnmarshalOptions = marshaler.UnmarshalOptions

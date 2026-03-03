@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	"github.com/sblinch/kdl-go/document"
-	"github.com/sblinch/kdl-go/internal/tokenizer"
+	"github.com/ar-go/go2kdl/document"
+	"github.com/ar-go/go2kdl/internal/tokenizer"
 )
 
 type Parser struct {
@@ -76,8 +76,16 @@ func (p *Parser) annotatedError(err error, t tokenizer.Token, context []tokenize
 func (p *Parser) parse(c *ParseContext, token tokenizer.Token) error {
 	if c.continuation {
 		switch token.ID {
-		case tokenizer.Newline, tokenizer.Whitespace, tokenizer.SingleLineComment, tokenizer.MultiLineComment:
+		case tokenizer.Whitespace, tokenizer.MultiLineComment:
 			// continue waiting for the first token of the next (continued) line
+		case tokenizer.Newline:
+			// consume the newline and clear continuation; subsequent newlines will
+			// be handled normally (terminating the current node, etc.)
+			c.continuation = false
+			return nil
+		case tokenizer.SingleLineComment:
+			// a single-line comment consumes the rest of the line; keep
+			// continuation active so the following newline is also consumed
 		default:
 			// this is the first token of the next (continued) line
 			c.continuation = false

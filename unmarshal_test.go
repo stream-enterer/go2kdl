@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sblinch/kdl-go/document"
-	"github.com/sblinch/kdl-go/relaxed"
+	"github.com/ar-go/go2kdl/document"
+	"github.com/ar-go/go2kdl/relaxed"
 )
 
 const kdlRelaxedSuffixes = `
@@ -72,10 +72,10 @@ func TestRelaxedSuffixes(t *testing.T) {
 const kdlSingleArg = `
 name "Bob"
 age 76
-active true
+active #true
 temperature 98.6
 secret 42
-divides-by null
+divides-by #null
 `
 
 type testSingleArg struct {
@@ -292,13 +292,13 @@ const kdlChildren = `
 bob {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
 klaus {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -324,13 +324,13 @@ const kdlArgsChildren = `
 bob "Johnson" {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
 klaus "Werner" {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -393,16 +393,16 @@ var expectArgsChildrenField = testArgsChildrenField{
 }
 
 const kdlArgsPropsChildren = `
-bob "Johnson" active=true {
+bob "Johnson" active=#true {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
-klaus "Werner" active=false {
+klaus "Werner" active=#false {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -444,13 +444,13 @@ const kdlMultiChildrenSlice = `
 person {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
 person {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -496,13 +496,13 @@ const kdlMultiChildrenMap = `
 person "Bob" {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
 person "Klaus" {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -529,19 +529,19 @@ const kdlTwoDimMultiChildrenMap = `
 person "Johnson" "Bob" {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
 person "Johnson" "Jim" {
 	nationality "Canadian"
 	age 35
-	language English=true French=false
+	language English=#true French=#false
 }
 
 person "Werner" "Klaus" {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -574,22 +574,22 @@ var expectTwoDimMultiChildrenMap = testTwoDimMultiChildrenMap{
 }
 
 const kdlArgsPropsTwoDimMultiChildren = `
-person "Johnson" "Bob" "leprechaun" active=true {
+person "Johnson" "Bob" "leprechaun" active=#true {
 	nationality "Canadian"
 	age 27
-	language English=true French=false
+	language English=#true French=#false
 }
 
-person "Johnson" "Jim" "chupacabra" active=true {
+person "Johnson" "Jim" "chupacabra" active=#true {
 	nationality "Canadian"
 	age 35
-	language English=true French=false
+	language English=#true French=#false
 }
 
-person "Werner" "Klaus" "sasquatch" active=false {
+person "Werner" "Klaus" "sasquatch" active=#false {
 	nationality "German"
 	age 32
-	language English=false German=true
+	language English=#false German=#true
 }
 `
 
@@ -766,8 +766,8 @@ var expectDuplicateNodes = testDuplicateNodes{
 }
 
 const kdlUnmarshalKDLNode = `
-father "Bob" "Johnson" age=32 active=true
-mother "Jane" "Johnson" age=28 active=true
+father "Bob" "Johnson" age=32 active=#true
+mother "Jane" "Johnson" age=28 active=#true
 `
 
 type testUnmarshalTextPerson struct {
@@ -798,7 +798,7 @@ func (t *testUnmarshalTextPerson) UnmarshalText(b []byte) error {
 }
 
 func (t *testUnmarshalTextPerson) MarshalText() ([]byte, error) {
-	b := make([]byte, 0, len(t.FirstName)+3+len(t.LastName)+3+len("age=nn ")+len("active=false "))
+	b := make([]byte, 0, len(t.FirstName)+3+len(t.LastName)+3+len("age=nn ")+len("active=#false "))
 	b = append(b, strconv.Quote(t.FirstName)...)
 	b = append(b, ' ')
 	b = append(b, strconv.Quote(t.LastName)...)

@@ -59,6 +59,9 @@ type ParseContext struct {
 
 	lastAddedNode *document.Node
 	recent        recentTokens
+
+	// source is the raw input buffer, used to populate error Source fields.
+	source []byte
 }
 
 type pendingComment struct {
@@ -77,6 +80,11 @@ func (p pendingComment) CopyBytes() []byte {
 
 func (c *ParseContext) RelaxedNonCompliant() relaxed.Flags {
 	return c.opts.RelaxedNonCompliant
+}
+
+// SetSource sets the raw input buffer for error diagnostics.
+func (c *ParseContext) SetSource(src []byte) {
+	c.source = src
 }
 
 // Document returns the current parsed document

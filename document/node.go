@@ -32,6 +32,9 @@ type Node struct {
 	Children []*Node
 	// Comment is the comment for the node, or nil if none
 	Comment *Comment
+	// Span is the position of the node name in source (zero if unavailable,
+	// e.g. programmatically constructed nodes).
+	Span Span
 }
 
 func (n *Node) ShallowCopy() *Node {
@@ -80,6 +83,7 @@ func (n *Node) SetNameToken(t tokenizer.Token) error {
 		return err
 	}
 	n.Name = v
+	n.Span = v.Span
 	return nil
 }
 

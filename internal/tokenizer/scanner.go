@@ -140,7 +140,7 @@ func (s *Scanner) get() (rune, error) {
 
 	if isNewline(c) {
 		s.line++
-		s.column = 1
+		s.column = 0
 	} else {
 		s.column++
 	}
@@ -307,6 +307,12 @@ func (s *Scanner) Offset() int {
 	return len(s.raw) - len(s.input)
 }
 
+// Raw returns the full raw input buffer. This is used by the parser to
+// populate Error.Source for diagnostic rendering.
+func (s *Scanner) Raw() []byte {
+	return s.raw
+}
+
 type staticScanner struct {
 	s  Scanner
 	mu sync.Mutex
@@ -342,6 +348,7 @@ func (s *Scanner) readHashToken() (Token, error) {
 	token := Token{
 		Line:   s.line,
 		Column: s.column,
+		Offset: s.Offset(),
 	}
 
 	// Count the number of leading '#' characters by consuming them and looking ahead
@@ -497,6 +504,7 @@ func (s *Scanner) readNext() (Token, error) {
 	token := Token{
 		Line:   s.line,
 		Column: s.column,
+		Offset: s.Offset(),
 	}
 
 	c, size, err := s.peekSize()
@@ -805,10 +813,17 @@ func (s *Scanner) extractLineAtOffset(offset int) string {
 	return string(line)
 }
 
-// annotatedError annotates err with the input line/column and positionSummary from the input buffer
+// annotatedError annotates err with the input line/column and source location
 func (s *Scanner) annotatedError(err error) error {
 	line, column := s.Pos()
-	return fmt.Errorf("scan failed: %w at line %d, column %d\n%s", err, line, column, s.extractLineAtOffset(len(s.raw)-len(s.input)))
+	offset := s.Offset()
+	return &ScanError{
+		Message: err.Error(),
+		Line:    line,
+		Column:  column,
+		Offset:  offset,
+		Source:  s.raw,
+	}
 }
 
 // SimpleLogger provides a simple logger that writes to stderr; this can be assigned to Scanner.Logger for debugging

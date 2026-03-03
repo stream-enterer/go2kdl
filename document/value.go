@@ -42,6 +42,9 @@ type Value struct {
 	// HasDecimal indicates whether the original source representation included a decimal point.
 	// This is used to preserve formatting for float values in E notation (e.g., 1.0E+10 vs 1E+10).
 	HasDecimal bool
+	// Span is the position of this value in source (zero if unavailable,
+	// e.g. programmatically constructed values).
+	Span Span
 }
 
 // valueOpts specify options for rendering Values as strings
@@ -406,7 +409,14 @@ func parseRawString(b []byte) (string, error) {
 
 // ValueFromToken creates and returns a Value representing the content of t, or a non-nil error on failure
 func ValueFromToken(t tokenizer.Token) (*Value, error) {
-	v := &Value{}
+	v := &Value{
+		Span: Span{
+			Offset: t.Offset,
+			Length: len(t.Data),
+			Line:   t.Line + 1,
+			Column: t.Column + 1,
+		},
+	}
 	var err error
 	switch t.ID {
 	case tokenizer.QuotedString:

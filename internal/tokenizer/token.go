@@ -151,6 +151,8 @@ type Token struct {
 	Data   []byte
 	Line   int
 	Column int
+	// Offset is the byte offset into the original input where this token starts.
+	Offset int
 }
 
 // String returns a string representation of the token for debugging
@@ -171,5 +173,5 @@ func (t Token) Valid() bool {
 func (t *Token) Clear() {
 	t.ID = Unknown
 	t.Data = nil
-	t.Line, t.Column = 0, 0
+	t.Line, t.Column, t.Offset = 0, 0, 0
 }

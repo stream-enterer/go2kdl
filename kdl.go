@@ -18,16 +18,45 @@ func parse(s *tokenizer.Scanner) (*document.Document, error) {
 		opts.Flags |= parser.ParseComments
 	}
 	c := p.NewContextOptions(opts)
+	c.SetSource(s.Raw())
 	for s.Scan() {
 		if err := p.Parse(c, s.Token()); err != nil {
-			return nil, err
+			return nil, toError(err)
 		}
 	}
 	if s.Err() != nil {
-		return nil, s.Err()
+		return nil, toError(s.Err())
 	}
 
 	return c.Document(), nil
+}
+
+// toError converts internal scanner/parser errors to *Error.
+func toError(err error) error {
+	if se, ok := err.(*tokenizer.ScanError); ok {
+		return &Error{
+			Message: se.Message,
+			Span: document.Span{
+				Offset: se.Offset,
+				Line:   se.Line,
+				Column: se.Column,
+			},
+			Source: se.Source,
+		}
+	}
+	if pe, ok := err.(*parser.ParseError); ok {
+		return &Error{
+			Message: pe.Message,
+			Span: document.Span{
+				Offset: pe.Offset,
+				Length: pe.Length,
+				Line:   pe.Line,
+				Column: pe.Column,
+			},
+			Source: pe.Source,
+		}
+	}
+	return err
 }
 
 type ParseOptions = parser.ParseContextOptions

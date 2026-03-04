@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ar-go/go2kdl/document"
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 const kdlRelaxedSuffixes = `
@@ -1213,6 +1213,7 @@ func TestUnmarshalSuite(t *testing.T) {
 }
 
 func TestUnmarshalProfile(t *testing.T) {
+	t.Skip("profiling tool, not a correctness test")
 	cpuf, err := os.Create("cpu.pprof")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create CPU profile: %v", err))

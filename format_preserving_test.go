@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ar-go/go2kdl/document"
-	"github.com/ar-go/go2kdl/internal/generator"
+	"github.com/stream-enterer/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/internal/generator"
 )
 
 // generatePreserving is a helper that generates with PreserveFormatting:true.

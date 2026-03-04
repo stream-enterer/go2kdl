@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 // readWhitespace reads all whitespace starting from the current position. It does not return an error as in practice it

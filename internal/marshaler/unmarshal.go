@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ar-go/go2kdl/document"
-	"github.com/ar-go/go2kdl/internal/coerce"
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/internal/coerce"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 type unmarshaler interface {

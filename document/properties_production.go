@@ -9,7 +9,7 @@ package document
 import (
 	"sort"
 
-	"github.com/ar-go/go2kdl/internal/tokenizer"
+	"github.com/stream-enterer/go2kdl/internal/tokenizer"
 )
 
 // Properties represents a list of properties for a Node

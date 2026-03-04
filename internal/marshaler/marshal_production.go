@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/ar-go/go2kdl/internal/coerce"
+	"github.com/stream-enterer/go2kdl/internal/coerce"
 )
 
 func sortMapKeys(v []reflect.Value) []reflect.Value {

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 var (

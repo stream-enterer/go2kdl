@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ar-go/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/document"
 )
 
 // TestFailCasesReturnStructuredError verifies that every _fail compliance

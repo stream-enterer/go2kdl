@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ar-go/go2kdl/document"
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 func TestParse(t *testing.T) {

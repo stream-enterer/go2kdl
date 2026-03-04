@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/ar-go/go2kdl/internal/tokenizer"
+	"github.com/stream-enterer/go2kdl/internal/tokenizer"
 )
 
 // ValueFlag represents flags for a Value

@@ -3,7 +3,7 @@ package generator
 import (
 	"io"
 
-	"github.com/ar-go/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/document"
 )
 
 type Options struct {

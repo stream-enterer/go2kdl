@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ar-go/go2kdl/document"
-	"github.com/ar-go/go2kdl/internal/tokenizer"
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/internal/tokenizer"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 type stateTransitionFunc func(*ParseContext, tokenizer.Token) error

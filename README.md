@@ -20,13 +20,13 @@ Forked from [sblinch/kdl-go](https://github.com/sblinch/kdl-go) and upgraded to 
 ## Install
 
 ```
-go get github.com/ar-go/go2kdl
+go get github.com/stream-enterer/go2kdl
 ```
 
 ## Import
 
 ```go
-import kdl "github.com/ar-go/go2kdl"
+import kdl "github.com/stream-enterer/go2kdl"
 ```
 
 ## Quick start

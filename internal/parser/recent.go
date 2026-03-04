@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/ar-go/go2kdl/internal/tokenizer"
+	"github.com/stream-enterer/go2kdl/internal/tokenizer"
 )
 
 const recentTokensCount = 5

@@ -1,7 +1,7 @@
 package tokenizer
 
 import (
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 // isWhiteSpace returns true if c is a whitespace character.

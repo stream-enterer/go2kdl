@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ar-go/go2kdl/internal/generator"
-	"github.com/ar-go/go2kdl/internal/tokenizer"
-	"github.com/ar-go/go2kdl/relaxed"
+	"github.com/stream-enterer/go2kdl/internal/generator"
+	"github.com/stream-enterer/go2kdl/internal/tokenizer"
+	"github.com/stream-enterer/go2kdl/relaxed"
 )
 
 const kdlSchema = `document {

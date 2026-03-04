@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ar-go/go2kdl/internal/tokenizer"
+	"github.com/stream-enterer/go2kdl/internal/tokenizer"
 )
 
 // TypeAnnotation represents a type annotation in a KDL document

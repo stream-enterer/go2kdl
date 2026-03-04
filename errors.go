@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ar-go/go2kdl/document"
+	"github.com/stream-enterer/go2kdl/document"
 )
 
 // Error is a structured parse error with source location and context.

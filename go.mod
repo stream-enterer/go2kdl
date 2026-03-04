@@ -1,3 +1,3 @@
-module github.com/ar-go/go2kdl
+module github.com/stream-enterer/go2kdl
 
 go 1.22

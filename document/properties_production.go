@@ -72,6 +72,11 @@ func (p Properties) sortedKeys() []string {
 	return keys
 }
 
+// Keys returns the property keys in sorted order (for deterministic output).
+func (p Properties) Keys() []string {
+	return p.sortedKeys()
+}
+
 // String returns the KDL representation of the property list, formatting numbers per their flags
 func (p Properties) String() string {
 	b := make([]byte, 0, len(p)*(1+8+1+8))

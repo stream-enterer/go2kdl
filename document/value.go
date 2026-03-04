@@ -48,6 +48,9 @@ type Value struct {
 	// Raw holds the original source text for this value token (including type
 	// annotation if present). When non-nil and the value has not been mutated,
 	// the generator can emit these bytes verbatim.
+	//
+	// Known limitation: type annotation whitespace is normalized on re-emission
+	// (e.g. "( u8 )" → "(u8)").
 	Raw *RawSegment
 }
 
@@ -56,6 +59,9 @@ func (v *Value) SetValue(val interface{}) { v.Value = val; v.Raw = nil }
 
 // SetType updates the type annotation and nils the Raw segment to mark it as dirty.
 func (v *Value) SetType(t TypeAnnotation) { v.Type = t; v.Raw = nil }
+
+// SetFlag updates the formatting flag and nils the Raw segment to mark it as dirty.
+func (v *Value) SetFlag(f ValueFlag) { v.Flag = f; v.Raw = nil }
 
 // valueOpts specify options for rendering Values as strings
 type valueOpts int

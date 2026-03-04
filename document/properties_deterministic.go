@@ -63,6 +63,11 @@ func (p *Properties) Delete(name string) bool {
 	return true
 }
 
+// Keys returns the property keys in insertion order.
+func (p *Properties) Keys() []string {
+	return p.order
+}
+
 func (p *Properties) String() string {
 	b := make([]byte, 0, len(p.order)*(1+8+1+8))
 	for _, k := range p.order {

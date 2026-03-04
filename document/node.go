@@ -38,16 +38,24 @@ type Node struct {
 	// Raw holds the original source text for this node (including leading trivia,
 	// arguments, properties, children block, and terminator). When non-nil and the
 	// node has not been mutated, the generator emits these bytes verbatim.
+	//
+	// Known limitations:
+	//  - Type annotation whitespace is normalized on re-emission (e.g. "( u8 )" → "(u8)").
+	//  - Leading trivia (whitespace/comments) belongs to the following node; removing
+	//    a node may shift its leading trivia to the next sibling.
 	Raw *RawSegment
 }
 
 func (n *Node) ShallowCopy() *Node {
 	r := &Node{}
 	*r = *n
+	r.Children = append([]*Node(nil), n.Children...)
+	r.Arguments = append([]*Value(nil), n.Arguments...)
 	return r
 }
 
 func (n *Node) ExpectChildren(count int) {
+	n.Raw = nil
 	want := len(n.Children) + count
 	if cap(n.Children) < want {
 		c := make([]*Node, 0, want)
@@ -57,6 +65,7 @@ func (n *Node) ExpectChildren(count int) {
 }
 
 func (n *Node) ExpectArguments(count int) {
+	n.Raw = nil
 	want := len(n.Arguments) + count
 	if cap(n.Arguments) < want {
 		a := make([]*Value, 0, want)
@@ -105,6 +114,33 @@ func (n *Node) RemoveNode(name string) bool {
 		}
 	}
 	return false
+}
+
+// DeleteProperty removes the named property and nils Raw. Returns true if deleted.
+func (n *Node) DeleteProperty(key string) bool {
+	deleted := n.Properties.Delete(key)
+	if deleted {
+		n.Raw = nil
+	}
+	return deleted
+}
+
+// SetType sets the type annotation and nils Raw.
+func (n *Node) SetType(t TypeAnnotation) {
+	n.Type = t
+	n.Raw = nil
+}
+
+// SetChildren replaces the children slice and nils Raw.
+func (n *Node) SetChildren(children []*Node) {
+	n.Children = children
+	n.Raw = nil
+}
+
+// SetArguments replaces the arguments slice and nils Raw.
+func (n *Node) SetArguments(args []*Value) {
+	n.Arguments = args
+	n.Raw = nil
 }
 
 // NewNode creates and returns a new Node
@@ -378,7 +414,30 @@ func (n *Node) WriteToOptions(w io.Writer, opts NodeWriteOptions) (int64, error)
 		}
 	}
 	if n.Properties.Exist() && err == nil {
-		if opts.IgnoreFlags {
+		if opts.PreserveFormatting {
+			for _, k := range n.Properties.Keys() {
+				v, _ := n.Properties.Get(k)
+				write([]byte{' '})
+				if len(k) > 0 && tokenizer.IsBareIdentifier(k, 0) {
+					write([]byte(k))
+				} else {
+					write(AppendQuotedString(nil, k, '"'))
+				}
+				write([]byte{'='})
+				if v.Raw != nil {
+					if len(v.Type) > 0 {
+						write([]byte{'('})
+						write([]byte(v.Type))
+						write([]byte{')'})
+					}
+					write(v.Raw.Bytes)
+				} else if opts.IgnoreFlags {
+					write([]byte(v.UnformattedString()))
+				} else {
+					write([]byte(v.FormattedString()))
+				}
+			}
+		} else if opts.IgnoreFlags {
 			write([]byte(n.Properties.UnformattedString()))
 		} else {
 			write([]byte(n.Properties.String()))

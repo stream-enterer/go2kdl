@@ -487,3 +487,188 @@ func TestFormatPreservingRawString(t *testing.T) {
 		t.Errorf("raw string round-trip:\ngot:  %q\nwant: %q", got, input)
 	}
 }
+
+// TestFormatPreservingChildEditPropagatesToParent verifies that mutating a child
+// found via FindNodeRecursive automatically causes the parent to re-generate
+// (no manual Raw niling on ancestors needed).
+func TestFormatPreservingChildEditPropagatesToParent(t *testing.T) {
+	input := "parent {\n\tchild 1\n}\n"
+	doc, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	child := doc.FindNodeRecursive("child")
+	if child == nil {
+		t.Fatal("child not found")
+	}
+	child.Arguments[0].SetValue(int64(99))
+	child.Raw = nil
+
+	got, err := generatePreserving(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(got, "99") {
+		t.Errorf("expected child edit to appear in output, got:\n%s", got)
+	}
+}
+
+// TestFormatPreservingGrandchildEdit verifies dirty propagation through multiple levels.
+func TestFormatPreservingGrandchildEdit(t *testing.T) {
+	input := "root {\n\tparent {\n\t\tleaf 1\n\t}\n}\n"
+	doc, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leaf := doc.FindNodeRecursive("leaf")
+	if leaf == nil {
+		t.Fatal("leaf not found")
+	}
+	leaf.Arguments[0].SetValue(int64(42))
+	leaf.Raw = nil
+
+	got, err := generatePreserving(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(got, "42") {
+		t.Errorf("expected grandchild edit to appear, got:\n%s", got)
+	}
+}
+
+// TestFormatPreservingDeletePropertyNilsRaw verifies DeleteProperty nils the node's Raw.
+func TestFormatPreservingDeletePropertyNilsRaw(t *testing.T) {
+	input := "node key=\"val\" other=\"keep\"\nuntouched 1\n"
+	doc, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	node := doc.FindNode("node")
+	if node == nil {
+		t.Fatal("node not found")
+	}
+	ok := node.DeleteProperty("key")
+	if !ok {
+		t.Fatal("DeleteProperty returned false")
+	}
+	if node.Raw != nil {
+		t.Error("expected Raw to be nil after DeleteProperty")
+	}
+
+	got, err := generatePreserving(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(got, "key=") {
+		t.Errorf("expected property 'key' removed, got:\n%s", got)
+	}
+	if !strings.Contains(got, "untouched 1\n") {
+		t.Errorf("expected 'untouched 1\\n' preserved, got:\n%s", got)
+	}
+}
+
+// TestFormatPreservingPerPropertyRaw verifies that when a node is dirty (e.g. arg added),
+// properties with intact Raw are still emitted verbatim.
+func TestFormatPreservingPerPropertyRaw(t *testing.T) {
+	input := "node 0xDEAD color=\"red\"\n"
+	doc, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	node := doc.FindNode("node")
+	if node == nil {
+		t.Fatal("node not found")
+	}
+	// Add a new argument, dirtying the node
+	node.AddArgument(int64(99), "")
+
+	got, err := generatePreserving(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The hex value's Raw on the argument should be preserved
+	if !strings.Contains(got, "0xDEAD") {
+		t.Errorf("expected hex arg preserved via Raw, got:\n%s", got)
+	}
+	if !strings.Contains(got, "99") {
+		t.Errorf("expected new arg in output, got:\n%s", got)
+	}
+}
+
+// TestFormatPreservingShallowCopyIsolation verifies that ShallowCopy creates
+// independent slices for Children and Arguments.
+func TestFormatPreservingShallowCopyIsolation(t *testing.T) {
+	original := document.NewNode()
+	original.SetName("test")
+	original.AddArgument(int64(1), "")
+	child := document.NewNode()
+	child.SetName("child")
+	original.AddNode(child)
+
+	cp := original.ShallowCopy()
+
+	// Mutate copy's slices
+	cp.AddArgument(int64(2), "")
+	newChild := document.NewNode()
+	newChild.SetName("newchild")
+	cp.AddNode(newChild)
+
+	// Original should be unchanged
+	if len(original.Arguments) != 1 {
+		t.Errorf("expected original to have 1 arg, got %d", len(original.Arguments))
+	}
+	if len(original.Children) != 1 {
+		t.Errorf("expected original to have 1 child, got %d", len(original.Children))
+	}
+}
+
+// TestFormatPreservingSetters verifies that SetType, SetChildren, SetArguments, SetFlag nil Raw.
+func TestFormatPreservingSetters(t *testing.T) {
+	input := "node 1\n"
+	doc, err := Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	node := doc.FindNode("node")
+	if node == nil {
+		t.Fatal("node not found")
+	}
+
+	// SetType on node
+	node.Raw = &document.RawSegment{Bytes: []byte("fake")}
+	node.SetType("mytype")
+	if node.Raw != nil {
+		t.Error("SetType should nil Raw")
+	}
+
+	// SetChildren
+	node.Raw = &document.RawSegment{Bytes: []byte("fake")}
+	node.SetChildren(nil)
+	if node.Raw != nil {
+		t.Error("SetChildren should nil Raw")
+	}
+
+	// SetArguments
+	node.Raw = &document.RawSegment{Bytes: []byte("fake")}
+	node.SetArguments(nil)
+	if node.Raw != nil {
+		t.Error("SetArguments should nil Raw")
+	}
+
+	// SetFlag on value
+	v := &document.Value{Value: int64(1)}
+	v.Raw = &document.RawSegment{Bytes: []byte("1")}
+	v.SetFlag(document.FlagHexadecimal)
+	if v.Raw != nil {
+		t.Error("SetFlag should nil Raw")
+	}
+}

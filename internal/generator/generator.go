@@ -64,7 +64,7 @@ func (g *Generator) generateNodes(nodes []*document.Node) error {
 	}
 
 	for _, node := range nodes {
-		if g.options.PreserveFormatting && node.Raw != nil {
+		if g.options.PreserveFormatting && node.Raw != nil && !hasAnyDirtyDescendant(node) {
 			if _, err := g.w.Write(node.Raw.Bytes); err != nil {
 				return err
 			}
@@ -75,6 +75,17 @@ func (g *Generator) generateNodes(nodes []*document.Node) error {
 		}
 	}
 	return nil
+}
+
+// hasAnyDirtyDescendant returns true if any child (recursively) has a nil Raw,
+// indicating it was mutated and needs re-generation.
+func hasAnyDirtyDescendant(node *document.Node) bool {
+	for _, child := range node.Children {
+		if child.Raw == nil || hasAnyDirtyDescendant(child) {
+			return true
+		}
+	}
+	return false
 }
 
 // Generate generates the KDL for a Document, and returns a non-nil error on failure

@@ -2,6 +2,7 @@ package document
 
 // Span identifies a range in source text.
 // Zero value means "no span available".
+// Check Line > 0 to distinguish a valid span from an absent one.
 type Span struct {
 	// Offset is the byte offset of the start of the span in the input.
 	Offset int

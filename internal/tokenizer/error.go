@@ -12,6 +12,8 @@ type ScanError struct {
 	Column int
 	// Offset is the byte offset in the input.
 	Offset int
+	// Length is the byte length of the erroneous span (0 if unknown).
+	Length int
 	// Source is the full input buffer (may be nil for streaming).
 	Source []byte
 }

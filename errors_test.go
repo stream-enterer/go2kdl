@@ -271,6 +271,79 @@ func TestErrorsType(t *testing.T) {
 	}
 }
 
+// TestFormatErrorNil verifies that FormatError(nil) returns "".
+func TestFormatErrorNil(t *testing.T) {
+	if got := FormatError(nil); got != "" {
+		t.Errorf("FormatError(nil) = %q, want empty string", got)
+	}
+}
+
+// TestErrorsUnwrapAs verifies that errors.As can reach into an Errors collection.
+func TestErrorsUnwrapAs(t *testing.T) {
+	errs := Errors{
+		{Message: "first", Span: document.Span{Line: 1, Column: 1}},
+		{Message: "second", Span: document.Span{Line: 2, Column: 5}},
+	}
+
+	var kdlErr *Error
+	if !errors.As(errs, &kdlErr) {
+		t.Fatal("errors.As(Errors, *Error) returned false, want true")
+	}
+	if kdlErr.Message != "first" {
+		t.Errorf("unwrapped error message = %q, want %q", kdlErr.Message, "first")
+	}
+}
+
+// TestMultiCharCaret verifies that FormatError renders multi-char underlines.
+func TestMultiCharCaret(t *testing.T) {
+	e := &Error{
+		Message: "bad token",
+		Span:    document.Span{Line: 1, Column: 5, Offset: 4, Length: 4},
+		Source:  []byte("foo bars baz"),
+	}
+	formatted := FormatError(e)
+	if !strings.Contains(formatted, "^^^^") {
+		t.Errorf("expected 4-char caret underline, got:\n%s", formatted)
+	}
+}
+
+// TestFormatErrorWithFilename verifies the filename variant.
+func TestFormatErrorWithFilename(t *testing.T) {
+	e := &Error{
+		Message: "oops",
+		Span:    document.Span{Line: 3, Column: 5, Offset: 20},
+		Source:  []byte("line1\nline2\nline3 some stuff here\n"),
+	}
+	formatted := FormatErrorWithFilename(e, "input.kdl")
+	if !strings.Contains(formatted, "input.kdl:3:5") {
+		t.Errorf("expected filename in location line, got:\n%s", formatted)
+	}
+}
+
+// TestExtractSourceLineEdgeCases tests extractSourceLine with edge cases.
+func TestExtractSourceLineEdgeCases(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		offset int
+		want   string
+	}{
+		{"offset 0", "hello world", 0, "hello world"},
+		{"past EOF", "hello", 100, "hello"},
+		{"empty source", "", 0, ""},
+		{"no newlines", "single line", 5, "single line"},
+		{"at newline boundary", "abc\ndef", 4, "def"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractSourceLine([]byte(tt.source), tt.offset)
+			if got != tt.want {
+				t.Errorf("extractSourceLine(%q, %d) = %q, want %q", tt.source, tt.offset, got, tt.want)
+			}
+		})
+	}
+}
+
 // TestErrorImplementsError verifies the error interface.
 func TestErrorImplementsError(t *testing.T) {
 	e := &Error{

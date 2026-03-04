@@ -18,9 +18,19 @@ import (
 //
 // If err is any other error, FormatError returns err.Error().
 func FormatError(err error) string {
+	return FormatErrorWithFilename(err, "")
+}
+
+// FormatErrorWithFilename is like FormatError but includes filename in the
+// location line (e.g. " --> filename:3:5") when filename is non-empty.
+func FormatErrorWithFilename(err error, filename string) string {
+	if err == nil {
+		return ""
+	}
+
 	var kdlErr *Error
 	if errors.As(err, &kdlErr) {
-		return formatSingle(kdlErr)
+		return formatSingle(kdlErr, filename)
 	}
 
 	var kdlErrs Errors
@@ -30,7 +40,7 @@ func FormatError(err error) string {
 			if i > 0 {
 				b.WriteByte('\n')
 			}
-			b.WriteString(formatSingle(&kdlErrs[i]))
+			b.WriteString(formatSingle(&kdlErrs[i], filename))
 		}
 		return b.String()
 	}
@@ -38,7 +48,7 @@ func FormatError(err error) string {
 	return err.Error()
 }
 
-func formatSingle(e *Error) string {
+func formatSingle(e *Error, filename string) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "error: %s\n", e.Message)
@@ -47,7 +57,11 @@ func formatSingle(e *Error) string {
 		return b.String()
 	}
 
-	fmt.Fprintf(&b, " --> %d:%d\n", e.Span.Line, e.Span.Column)
+	if filename != "" {
+		fmt.Fprintf(&b, " --> %s:%d:%d\n", filename, e.Span.Line, e.Span.Column)
+	} else {
+		fmt.Fprintf(&b, " --> %d:%d\n", e.Span.Line, e.Span.Column)
+	}
 
 	if len(e.Source) == 0 {
 		return b.String()
@@ -58,9 +72,10 @@ func formatSingle(e *Error) string {
 	lineNo := fmt.Sprintf("%d", e.Span.Line)
 	gutter := strings.Repeat(" ", len(lineNo))
 
+	caretLen := max(1, e.Span.Length)
 	fmt.Fprintf(&b, " %s |\n", gutter)
 	fmt.Fprintf(&b, " %s | %s\n", lineNo, line)
-	fmt.Fprintf(&b, " %s | %s^\n", gutter, strings.Repeat(" ", max(0, e.Span.Column-1)))
+	fmt.Fprintf(&b, " %s | %s%s\n", gutter, strings.Repeat(" ", max(0, e.Span.Column-1)), strings.Repeat("^", caretLen))
 
 	return b.String()
 }

@@ -33,10 +33,11 @@ var eofToken = tokenizer.Token{
 }
 
 func (p *Parser) annotatedError(err error, t tokenizer.Token, _ []tokenizer.Token, _ int, source []byte) error {
+	line, col := t.OneBased()
 	return &ParseError{
 		Message: err.Error(),
-		Line:    t.Line + 1,
-		Column:  t.Column + 1,
+		Line:    line,
+		Column:  col,
 		Offset:  t.Offset,
 		Length:  len(t.Data),
 		Source:  source,

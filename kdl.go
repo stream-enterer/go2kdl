@@ -44,6 +44,7 @@ func toError(err error) error {
 			Message: se.Message,
 			Span: document.Span{
 				Offset: se.Offset,
+				Length: se.Length,
 				Line:   se.Line,
 				Column: se.Column,
 			},

@@ -164,6 +164,12 @@ func (t Token) String() string {
 	}
 }
 
+// OneBased returns the 1-based line and column for this token.
+// Token stores 0-based line/column internally.
+func (t Token) OneBased() (line, col int) {
+	return t.Line + 1, t.Column + 1
+}
+
 // Valid returns true if this token has a valid ID
 func (t Token) Valid() bool {
 	return t.ID != Unknown

@@ -425,12 +425,13 @@ func parseRawString(b []byte) (string, error) {
 
 // ValueFromToken creates and returns a Value representing the content of t, or a non-nil error on failure
 func ValueFromToken(t tokenizer.Token) (*Value, error) {
+	line, col := t.OneBased()
 	v := &Value{
 		Span: Span{
 			Offset: t.Offset,
 			Length: len(t.Data),
-			Line:   t.Line + 1,
-			Column: t.Column + 1,
+			Line:   line,
+			Column: col,
 		},
 	}
 	var err error

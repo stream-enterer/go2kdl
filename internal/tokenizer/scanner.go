@@ -822,6 +822,7 @@ func (s *Scanner) annotatedError(err error) error {
 		Line:    line,
 		Column:  column,
 		Offset:  offset,
+		Length:  1,
 		Source:  s.raw,
 	}
 }

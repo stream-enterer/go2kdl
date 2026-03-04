@@ -26,11 +26,18 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-// Unwrap returns nil (leaf error).
-func (e *Error) Unwrap() error { return nil }
-
 // Errors collects one or more parse errors.
 type Errors []Error
+
+// Unwrap returns the individual errors so errors.As/errors.Is can
+// traverse into the collection.
+func (e Errors) Unwrap() []error {
+	errs := make([]error, len(e))
+	for i := range e {
+		errs[i] = &e[i]
+	}
+	return errs
+}
 
 // Error joins messages, one per line.
 func (e Errors) Error() string {
